@@ -43,14 +43,15 @@ export const toast = {
 
   /**
    * Toast que sigue una promise: loading mientras corre, success/error al terminar.
-   * Aplica un mínimo de 800ms al estado loading para evitar flashes.
+   * Aplica un mínimo de 1200ms al estado loading para que sea visible en
+   * operaciones rápidas — evita el "flash" donde apenas se ve el loading.
    */
   promise: <T,>(
     promise: Promise<T> | (() => Promise<T>),
     opts: Parameters<typeof sileo.promise<T>>[1],
   ): Promise<T> => {
     const p = typeof promise === "function" ? promise() : promise;
-    const minDelay = new Promise<void>((r) => setTimeout(r, 800));
+    const minDelay = new Promise<void>((r) => setTimeout(r, 1200));
     const padded = Promise.all([p, minDelay]).then(([data]) => data);
     return sileo.promise<T>(padded, opts);
   },

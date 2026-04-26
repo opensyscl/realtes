@@ -311,8 +311,8 @@ export function PropertyWizard({ property }: { property?: Property }) {
   });
 
   // Submit directo sin pasar por handleSubmit (que falla en silencio si zod
-  // detecta cualquier error en otro step). Usamos getValues + dispara
-  // validación en background sólo como warning.
+  // detecta cualquier error en otro step). Usamos getValues + toast.promise
+  // que muestra loading/success/error con un mínimo de 800ms para el loading.
   const submitWith = (publish: boolean | null) => async () => {
     const data = form.getValues();
     const cleaned: Record<string, unknown> = {};
@@ -321,21 +321,34 @@ export function PropertyWizard({ property }: { property?: Property }) {
       cleaned[k] = v;
     }
     if (publish !== null) cleaned.is_published = publish;
+
+    const loadingTitle =
+      publish === true
+        ? "Publicando propiedad…"
+        : publish === false
+          ? "Guardando borrador…"
+          : "Guardando cambios…";
+    const successTitle =
+      publish === true
+        ? "Propiedad publicada"
+        : publish === false
+          ? "Borrador guardado"
+          : "Cambios guardados";
+
     try {
-      const saved = await save.mutateAsync(cleaned);
-      toast.success(
-        publish === true
-          ? "Propiedad publicada"
-          : publish === false
-            ? "Borrador guardado"
-            : "Cambios guardados",
-      );
+      const saved = await toast.promise(save.mutateAsync(cleaned), {
+        loading: { title: loadingTitle },
+        success: { title: successTitle },
+        error: (err: unknown) => ({
+          title: "Error al guardar",
+          description: err instanceof Error ? err.message : "Error desconocido",
+        }),
+      });
       if (!property) {
         router.push(`/propiedades/${saved.id}`);
       }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error desconocido";
-      toast.error({ title: "Error al guardar", description: msg });
+    } catch {
+      // sileo.promise ya muestra el toast de error; no hace falta hacer nada más
     }
   };
 
