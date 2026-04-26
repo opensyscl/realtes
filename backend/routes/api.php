@@ -71,6 +71,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/agency/watermark', [AgencySettingsController::class, 'updateWatermark']);
     Route::post('/agency/watermark/image', [AgencySettingsController::class, 'uploadWatermarkImage']);
     Route::delete('/agency/watermark/image', [AgencySettingsController::class, 'deleteWatermarkImage']);
+    Route::get('/agency/qr', [AgencySettingsController::class, 'showQr']);
+    Route::patch('/agency/qr', [AgencySettingsController::class, 'updateQr']);
+    Route::post('/agency/qr/logo', [AgencySettingsController::class, 'uploadQrLogo']);
 
     // Uploads directos a R2 (cover image, etc.)
     Route::post('/uploads/property-cover', [UploadController::class, 'propertyCover']);

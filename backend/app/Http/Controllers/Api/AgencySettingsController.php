@@ -217,6 +217,70 @@ class AgencySettingsController extends Controller
         return null;
     }
 
+    public function showQr(Request $request): JsonResponse
+    {
+        $agency = Agency::findOrFail($request->user()->agency_id);
+
+        return response()->json([
+            'data' => [
+                'logo_url' => $agency->qr_logo_url,
+                'color_main' => $agency->qr_color_main ?: '#C7B593',
+                'color_bg' => $agency->qr_color_bg ?: '#ffffff',
+            ],
+        ]);
+    }
+
+    public function updateQr(Request $request): JsonResponse
+    {
+        $agency = Agency::findOrFail($request->user()->agency_id);
+
+        $data = $request->validate([
+            'logo_url' => ['nullable', 'url', 'max:500'],
+            'color_main' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'color_bg' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+        ]);
+
+        if (array_key_exists('logo_url', $data)) {
+            $agency->qr_logo_url = $data['logo_url'];
+        }
+        if (array_key_exists('color_main', $data)) {
+            $agency->qr_color_main = $data['color_main'];
+        }
+        if (array_key_exists('color_bg', $data)) {
+            $agency->qr_color_bg = $data['color_bg'];
+        }
+        $agency->save();
+
+        return $this->showQr($request);
+    }
+
+    public function uploadQrLogo(Request $request): JsonResponse
+    {
+        $agency = Agency::findOrFail($request->user()->agency_id);
+
+        $request->validate([
+            'file' => ['required', 'file', 'image', 'max:5120'],
+        ]);
+
+        $file = $request->file('file');
+        $ext = $file->getClientOriginalExtension() ?: 'png';
+        $name = Str::uuid()->toString().'.'.$ext;
+        $key = "agencies/{$agency->id}/qr/{$name}";
+
+        $disk = Storage::disk(config('media-library.disk_name', 'public'));
+        $disk->put($key, file_get_contents($file->getRealPath()), 'public');
+
+        $agency->qr_logo_url = $disk->url($key);
+        $agency->save();
+
+        return response()->json([
+            'data' => [
+                'logo_url' => $agency->qr_logo_url,
+                'key' => $key,
+            ],
+        ], 201);
+    }
+
     public function updateTemplate(Request $request): JsonResponse
     {
         $agency = Agency::findOrFail($request->user()->agency_id);

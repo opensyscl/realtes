@@ -112,7 +112,7 @@ export function PropertyGalleryHero({
   return (
     <>
       {/* Wrapper relative para que el badge "Ver todas" flote sobre la galería */}
-      <div className="relative h-[260px] self-start lg:h-[340px]">
+      <div className="relative h-[260px] self-start lg:h-[462px]">
         <div className="grid h-full grid-cols-1 gap-2.5 lg:grid-cols-2">
           {/* Imagen grande izquierda (cuadrada) */}
           <button

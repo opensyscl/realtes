@@ -14,9 +14,11 @@ import {
   Copy01Icon,
   ZapIcon,
   Image01Icon,
+  QrCode01Icon,
 } from "@hugeicons/core-free-icons";
 
 import { WatermarkTab } from "@/components/settings/watermark-tab";
+import { QrTab } from "@/components/settings/qr-tab";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,12 +45,13 @@ import { SUPPORTED_CURRENCIES } from "@/lib/utils";
 import { UpgradeDialog } from "@/components/billing/upgrade-dialog";
 import { cn, formatCurrency } from "@/lib/utils";
 
-type TabId = "perfil" | "agencia" | "marca_agua" | "facturacion" | "distribucion" | "api" | "seguridad";
+type TabId = "perfil" | "agencia" | "marca_agua" | "qr" | "facturacion" | "distribucion" | "api" | "seguridad";
 
 const TABS: { id: TabId; label: string; icon: Parameters<typeof Icon>[0]["icon"] }[] = [
   { id: "perfil", label: "Perfil", icon: UserIcon },
   { id: "agencia", label: "Agencia", icon: Building03Icon },
   { id: "marca_agua", label: "Marca de agua", icon: Image01Icon },
+  { id: "qr", label: "QR", icon: QrCode01Icon },
   { id: "facturacion", label: "Facturación", icon: ZapIcon },
   { id: "distribucion", label: "Distribución", icon: ZapIcon },
   { id: "api", label: "API & Tokens", icon: SquareLock02Icon },
@@ -95,6 +98,7 @@ export default function SettingsPage() {
           {tab === "perfil" && <PerfilTab />}
           {tab === "agencia" && <AgenciaTab />}
           {tab === "marca_agua" && <WatermarkTab />}
+          {tab === "qr" && <QrTab />}
           {tab === "facturacion" && <FacturacionTab />}
           {tab === "distribucion" && <DistribucionTab />}
           {tab === "api" && <ApiTokensTab />}

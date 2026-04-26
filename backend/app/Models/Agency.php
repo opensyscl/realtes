@@ -21,6 +21,7 @@ class Agency extends Model
         'public_primary_color', 'public_font',
         'currency', 'locale',
         'watermark_image_url', 'watermark_settings',
+        'qr_logo_url', 'qr_color_main', 'qr_color_bg',
     ];
 
     protected $casts = [

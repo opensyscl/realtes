@@ -2284,6 +2284,53 @@ export function useDeleteWatermarkImage() {
 }
 
 // ===========================================================
+// QR settings (default por agencia)
+// ===========================================================
+export interface QrSettings {
+  logo_url: string | null;
+  color_main: string;
+  color_bg: string;
+}
+
+export function useAgencyQr() {
+  return useQuery({
+    queryKey: ["agency", "qr"],
+    queryFn: async () => {
+      const res = await api.get<{ data: QrSettings }>("/api/agency/qr");
+      return res.data.data;
+    },
+  });
+}
+
+export function useUpdateAgencyQr() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: Partial<QrSettings>) => {
+      const res = await api.patch<{ data: QrSettings }>("/api/agency/qr", data);
+      return res.data.data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["agency", "qr"] }),
+  });
+}
+
+export function useUploadQrLogo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await api.post<{ data: { logo_url: string; key: string } }>(
+        "/api/agency/qr/logo",
+        fd,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      return res.data.data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["agency", "qr"] }),
+  });
+}
+
+// ===========================================================
 // Alliances (alianzas comerciales con beneficios)
 // ===========================================================
 export interface Alliance {
