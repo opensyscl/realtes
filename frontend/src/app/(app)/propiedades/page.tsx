@@ -14,6 +14,7 @@ import {
   RulerIcon,
   Location01Icon,
   Camera01Icon,
+  Mail01Icon,
   GridViewIcon,
   GridTableIcon,
 } from "@hugeicons/core-free-icons";
@@ -427,6 +428,15 @@ function PropertyCard({ property: p }: { property: Property }) {
                 <span className="inline-flex items-center gap-1 rounded-full bg-black/45 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
                   <Icon icon={Camera01Icon} size={10} />
                   1
+                </span>
+              )}
+              {(p.leads_count ?? 0) > 0 && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full bg-black/45 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm"
+                  title={`${p.leads_count} consulta${p.leads_count === 1 ? "" : "s"} en el historial`}
+                >
+                  <Icon icon={Mail01Icon} size={10} />
+                  {p.leads_count}
                 </span>
               )}
             </div>
