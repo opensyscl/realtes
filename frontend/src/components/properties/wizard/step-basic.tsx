@@ -153,13 +153,13 @@ export function StepBasic<TForm extends FieldValues = BasicFormValues>({
 
       {/* Título + descripción */}
       <section className="space-y-4">
-        <Field label="Título *" error={errs.title?.message}>
+        <Field label="Título *" error={errs.title?.message} dataField="title">
           <Input
             {...register(f("title"))}
             placeholder="Ej: Departamento luminoso en Providencia"
           />
         </Field>
-        <Field label="Descripción" hint="Aparece en el escaparate público y portales">
+        <Field label="Descripción" hint="Aparece en el escaparate público y portales" dataField="description">
           <Textarea
             rows={5}
             {...register(f("description"))}
@@ -341,6 +341,7 @@ export function StepBasic<TForm extends FieldValues = BasicFormValues>({
             <Field
               label={showSale ? "Precio arriendo *" : "Precio *"}
               error={errs.price_rent?.message}
+              dataField="price"
             >
               <Input
                 type="number"
@@ -361,6 +362,7 @@ export function StepBasic<TForm extends FieldValues = BasicFormValues>({
             <Field
               label={isRent ? "Precio venta *" : "Precio *"}
               error={errs.price_sale?.message}
+              dataField={isRent ? undefined : "price"}
             >
               <Input
                 type="number"

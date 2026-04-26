@@ -15,14 +15,42 @@ import {
 import type { UseFormReturn } from "react-hook-form";
 
 import { Icon } from "@/components/ui/icon";
+import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { StepId, WizardStep } from "./wizard-shell";
 
 interface Requirement {
   field: string;
+  /** Selector estable [data-field=...] del input correspondiente. */
+  dataField?: string;
   label: string;
   step: StepId;
   isMet: boolean;
+}
+
+/**
+ * Resalta el input correspondiente: scrolla, marca el `<Field>` con
+ * `data-wizard-highlight=true` durante 2.5s y enfoca el input interno.
+ */
+function highlightField(dataField: string | undefined) {
+  if (!dataField) return;
+  // Pequeño retraso para dar tiempo a que el step renderice
+  setTimeout(() => {
+    const el = document.querySelector<HTMLElement>(
+      `[data-field="${dataField}"]`,
+    );
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.dataset.wizardHighlight = "true";
+    // Foco al primer input/textarea/select dentro
+    const focusable = el.querySelector<HTMLElement>(
+      "input, textarea, select",
+    );
+    focusable?.focus({ preventScroll: true });
+    setTimeout(() => {
+      delete el.dataset.wizardHighlight;
+    }, 2500);
+  }, 120);
 }
 
 export function WizardSmartBar({
@@ -65,12 +93,14 @@ export function WizardSmartBar({
     return [
       {
         field: "title",
+        dataField: "title",
         label: "Título de la propiedad",
         step: "basic",
         isMet: !!values.title && String(values.title).trim().length > 0,
       },
       {
         field: "description",
+        dataField: "description",
         label: "Descripción",
         step: "basic",
         isMet:
@@ -79,24 +109,28 @@ export function WizardSmartBar({
       },
       {
         field: "price",
+        dataField: "price",
         label: isRent ? "Precio de renta" : "Precio de venta",
         step: "basic",
         isMet: hasPrice,
       },
       {
         field: "address",
+        dataField: "address",
         label: "Dirección",
         step: "location",
         isMet: !!values.address && String(values.address).trim().length > 0,
       },
       {
         field: "city",
+        dataField: "city",
         label: "Ciudad",
         step: "location",
         isMet: !!values.city && String(values.city).trim().length > 0,
       },
       {
         field: "bedrooms_or_area",
+        dataField: "bedrooms",
         label: "Habitaciones o superficie",
         step: "features",
         isMet:
@@ -130,6 +164,7 @@ export function WizardSmartBar({
       },
       {
         field: "condition",
+        dataField: "condition",
         label: "Estado interior",
         step: "interior",
         isMet: !!values.condition,
@@ -137,6 +172,12 @@ export function WizardSmartBar({
     ],
     [values],
   );
+
+  /** Cambia al step y resalta el campo correspondiente. */
+  const goToRequirement = (req: Requirement) => {
+    onChangeStep(req.step);
+    highlightField(req.dataField);
+  };
 
   const totalRequired = required.length;
   const metRequired = required.filter((r) => r.isMet).length;
@@ -156,6 +197,7 @@ export function WizardSmartBar({
         kind: "required" as const,
         label: missingRequired[0].label,
         step: missingRequired[0].step,
+        dataField: missingRequired[0].dataField,
       };
     }
     if (missingRecommended.length > 0) {
@@ -163,6 +205,7 @@ export function WizardSmartBar({
         kind: "recommended" as const,
         label: missingRecommended[0].label,
         step: missingRecommended[0].step,
+        dataField: missingRecommended[0].dataField,
       };
     }
     const enabled = steps.filter((s) => s.enabled);
@@ -173,12 +216,13 @@ export function WizardSmartBar({
           kind: "next" as const,
           label: nextStep.label,
           step: nextStep.id,
+          dataField: undefined,
         }
       : null;
   }, [missingRequired, missingRecommended, steps, current]);
 
   return (
-    <div className="pointer-events-none fixed bottom-4 left-1/2 z-40 w-[calc(100%-2rem)] max-w-[820px] -translate-x-1/2">
+    <div className="pointer-events-none fixed bottom-4 left-1/2 z-40 w-[calc(100%-2rem)] max-w-[920px] -translate-x-1/2">
       {/* Panel expandido (encima de la barra) */}
       {expanded && (
         <div className="pointer-events-auto mb-2 rounded-2xl border border-border bg-surface p-4 shadow-2xl">
@@ -215,7 +259,7 @@ export function WizardSmartBar({
                 <li key={r.field}>
                   <button
                     type="button"
-                    onClick={() => onChangeStep(r.step)}
+                    onClick={() => goToRequirement(r)}
                     className="flex w-full items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface px-3 py-2 text-left transition-colors hover:border-primary/40 hover:bg-primary-soft/10"
                   >
                     <div className="flex items-center gap-2.5">
@@ -249,7 +293,7 @@ export function WizardSmartBar({
                   <li key={r.field}>
                     <button
                       type="button"
-                      onClick={() => onChangeStep(r.step)}
+                      onClick={() => goToRequirement(r)}
                       className="flex w-full items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface px-3 py-2 text-left transition-colors hover:border-primary/40 hover:bg-primary-soft/10"
                     >
                       <div className="flex items-center gap-2.5">
@@ -281,142 +325,168 @@ export function WizardSmartBar({
       )}
 
       {/* Barra principal */}
-      <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-foreground py-2 pl-2 pr-2 text-accent-foreground shadow-2xl">
+      <div className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-border bg-foreground py-2 pl-2 pr-2 text-accent-foreground shadow-2xl">
         {/* Progreso circular */}
-        <button
-          type="button"
-          onClick={() => setExpanded((o) => !o)}
-          className="flex items-center gap-2.5 rounded-full px-2 py-1 hover:bg-accent-foreground/10"
-          title="Ver detalles"
-        >
-          <ProgressRing pct={overallPct} ok={isPublishable} />
-          <div className="text-left">
-            <div className="text-[10px] uppercase tracking-wider opacity-60">
-              Completado
+        <Tooltip label="Ver detalles del progreso" side="top">
+          <button
+            type="button"
+            onClick={() => setExpanded((o) => !o)}
+            className="flex shrink-0 items-center gap-2.5 rounded-full px-2 py-1 hover:bg-accent-foreground/10"
+          >
+            <ProgressRing pct={overallPct} ok={isPublishable} />
+            <div className="text-left">
+              <div className="whitespace-nowrap text-[10px] uppercase tracking-wider opacity-60">
+                Completado
+              </div>
+              <div className="text-[12px] font-semibold tabular-numbers">
+                {overallPct}%
+              </div>
             </div>
-            <div className="text-[12px] font-semibold tabular-numbers">
-              {overallPct}%
-            </div>
-          </div>
-        </button>
+          </button>
+        </Tooltip>
 
-        <div className="mx-1 h-6 w-px bg-accent-foreground/20" />
+        <div className="mx-1 h-6 w-px shrink-0 bg-accent-foreground/20" />
 
         {/* Estado: publicable o no */}
-        <div className="flex items-center gap-2 px-2">
+        <div className="flex shrink-0 items-center gap-2 whitespace-nowrap px-2">
           <span
             className={cn(
-              "flex h-2 w-2 rounded-full",
+              "flex h-2 w-2 shrink-0 rounded-full",
               isPublishable ? "bg-positive" : "bg-warning",
             )}
           />
           <span className="text-[12px] font-medium">
             {isPublishable
               ? "Lista para publicar"
-              : `${missingRequired.length} esencial${missingRequired.length === 1 ? "" : "es"}`}
+              : `${missingRequired.length} ${missingRequired.length === 1 ? "esencial" : "esenciales"}`}
           </span>
         </div>
 
-        <div className="mx-1 h-6 w-px bg-accent-foreground/20" />
+        <div className="mx-1 h-6 w-px shrink-0 bg-accent-foreground/20" />
 
         {/* Sugerencia del siguiente paso */}
         {nextSuggestion && (
-          <button
-            type="button"
-            onClick={() => onChangeStep(nextSuggestion.step)}
-            className="inline-flex max-w-[280px] items-center gap-1.5 truncate rounded-full px-3 py-1.5 text-[12px] font-medium hover:bg-accent-foreground/10"
-            title={`Ir a: ${nextSuggestion.label}`}
+          <Tooltip
+            label={
+              <span>
+                {nextSuggestion.kind === "required" && "Falta · "}
+                {nextSuggestion.kind === "recommended" && "Sugerido · "}
+                {nextSuggestion.kind === "next" && "Siguiente paso · "}
+                <strong>{nextSuggestion.label}</strong>
+                <br />
+                <span className="opacity-70">Click para ir</span>
+              </span>
+            }
+            side="top"
           >
-            <Icon
-              icon={
-                nextSuggestion.kind === "required"
-                  ? AlertCircleIcon
-                  : nextSuggestion.kind === "recommended"
-                    ? SparklesIcon
-                    : ArrowRight01Icon
-              }
-              size={12}
-              className={cn(
-                nextSuggestion.kind === "required" && "text-warning",
-                nextSuggestion.kind === "recommended" && "text-info",
-              )}
-            />
-            <span className="truncate opacity-80">
-              {nextSuggestion.kind === "required" && "Falta:"}
-              {nextSuggestion.kind === "recommended" && "Sugerido:"}
-              {nextSuggestion.kind === "next" && "Siguiente:"}
-            </span>
-            <span className="truncate font-semibold">
-              {nextSuggestion.label}
-            </span>
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                onChangeStep(nextSuggestion.step);
+                highlightField(nextSuggestion.dataField);
+              }}
+              className="inline-flex min-w-0 flex-1 items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium hover:bg-accent-foreground/10"
+            >
+              <Icon
+                icon={
+                  nextSuggestion.kind === "required"
+                    ? AlertCircleIcon
+                    : nextSuggestion.kind === "recommended"
+                      ? SparklesIcon
+                      : ArrowRight01Icon
+                }
+                size={12}
+                className={cn(
+                  "shrink-0",
+                  nextSuggestion.kind === "required" && "text-warning",
+                  nextSuggestion.kind === "recommended" && "text-info",
+                )}
+              />
+              <span className="shrink-0 whitespace-nowrap opacity-80">
+                {nextSuggestion.kind === "required" && "Falta:"}
+                {nextSuggestion.kind === "recommended" && "Sugerido:"}
+                {nextSuggestion.kind === "next" && "Siguiente:"}
+              </span>
+              <span className="truncate font-semibold">
+                {nextSuggestion.label}
+              </span>
+            </button>
+          </Tooltip>
         )}
 
-        <div className="mx-1 h-6 w-px bg-accent-foreground/20" />
+        <div className="mx-1 h-6 w-px shrink-0 bg-accent-foreground/20" />
 
         {/* Vista previa */}
-        <button
-          type="button"
-          onClick={onPreview}
-          className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-semibold transition-colors hover:bg-accent-foreground/10"
-          title="Ver cómo se verá la ficha pública"
-        >
-          <Icon icon={ViewIcon} size={13} />
-          Vista previa
-        </button>
+        <Tooltip label="Ver cómo se verá la ficha pública" side="top">
+          <button
+            type="button"
+            onClick={onPreview}
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[12px] font-semibold transition-colors hover:bg-accent-foreground/10"
+          >
+            <Icon icon={ViewIcon} size={13} />
+            Vista previa
+          </button>
+        </Tooltip>
 
         {/* Guardar borrador (siempre disponible) */}
-        <button
-          type="button"
-          onClick={onSaveDraft}
-          disabled={saving}
-          className={cn(
-            "inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-semibold transition-colors",
-            "bg-accent-foreground/10 hover:bg-accent-foreground/20",
-            saving && "cursor-wait opacity-60",
-          )}
-          title="Guardar como borrador (no se publica)"
-        >
-          <Icon icon={Note01Icon} size={13} />
-          {saving ? "Guardando…" : "Borrador"}
-        </button>
+        <Tooltip label="Guardar como borrador (no se publica)" side="top">
+          <button
+            type="button"
+            onClick={onSaveDraft}
+            disabled={saving}
+            className={cn(
+              "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[12px] font-semibold transition-colors",
+              "bg-accent-foreground/10 hover:bg-accent-foreground/20",
+              saving && "cursor-wait opacity-60",
+            )}
+          >
+            <Icon icon={Note01Icon} size={13} />
+            {saving ? "Guardando…" : "Borrador"}
+          </button>
+        </Tooltip>
 
         {/* CTA: Publicar (solo si está completo) */}
-        <button
-          type="button"
-          onClick={onPublish}
-          disabled={saving || !isPublishable}
-          className={cn(
-            "inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-[12px] font-semibold transition-all",
-            isPublishable
-              ? "bg-positive text-white hover:bg-positive/90"
-              : "cursor-not-allowed bg-accent-foreground/5 text-accent-foreground/40",
-            saving && "cursor-wait opacity-60",
-          )}
-          title={
+        <Tooltip
+          label={
             isPublishable
               ? isPublished
                 ? "Actualizar ficha publicada"
                 : "Publicar la propiedad"
               : "Completa los campos esenciales para publicar"
           }
+          side="top"
         >
-          <Icon icon={RocketIcon} size={13} />
-          {isPublished ? "Actualizar publicación" : "Publicar"}
-        </button>
+          <button
+            type="button"
+            onClick={onPublish}
+            disabled={saving || !isPublishable}
+            className={cn(
+              "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 text-[12px] font-semibold transition-all",
+              isPublishable
+                ? "bg-positive text-white hover:bg-positive/90"
+                : "cursor-not-allowed bg-accent-foreground/5 text-accent-foreground/40",
+              saving && "cursor-wait opacity-60",
+            )}
+          >
+            <Icon icon={RocketIcon} size={13} />
+            {isPublished ? "Actualizar" : "Publicar"}
+          </button>
+        </Tooltip>
 
         {/* Toggle expand */}
-        <button
-          type="button"
-          onClick={() => setExpanded((o) => !o)}
-          className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-accent-foreground/10"
-          aria-label={expanded ? "Cerrar panel" : "Ver detalles"}
-        >
-          <Icon
-            icon={expanded ? ArrowDown01Icon : ArrowUp01Icon}
-            size={13}
-          />
-        </button>
+        <Tooltip label={expanded ? "Cerrar panel" : "Ver detalles"} side="top">
+          <button
+            type="button"
+            onClick={() => setExpanded((o) => !o)}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-accent-foreground/10"
+            aria-label={expanded ? "Cerrar panel" : "Ver detalles"}
+          >
+            <Icon
+              icon={expanded ? ArrowDown01Icon : ArrowUp01Icon}
+              size={13}
+            />
+          </button>
+        </Tooltip>
 
         {/* Datos al pasar el cursor */}
         <span className="sr-only">

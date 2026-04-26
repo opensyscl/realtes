@@ -60,7 +60,7 @@ export function StepFeatures<TForm extends FieldValues>({
       </div>
 
       <section className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <Field label="Habitaciones" error={errs.bedrooms?.message}>
+        <Field label="Habitaciones" error={errs.bedrooms?.message} dataField="bedrooms">
           <Input
             type="number"
             min={0}
@@ -79,7 +79,7 @@ export function StepFeatures<TForm extends FieldValues>({
             leading={<Icon icon={Bathtub01Icon} size={13} />}
           />
         </Field>
-        <Field label="Superficie (m²)" error={errs.area_sqm?.message}>
+        <Field label="Superficie (m²)" error={errs.area_sqm?.message} dataField="area_sqm">
           <Input
             type="number"
             min={1}

@@ -42,6 +42,7 @@ export function StepLocation<TForm extends FieldValues>({
           label="Dirección *"
           error={errs.address?.message}
           className="sm:col-span-4"
+          dataField="address"
         >
           <Input
             {...register(f("address"))}
@@ -55,7 +56,7 @@ export function StepLocation<TForm extends FieldValues>({
           <Input {...register(f("door"))} placeholder="A" maxLength={10} />
         </Field>
 
-        <Field label="Comuna / Ciudad" className="sm:col-span-2">
+        <Field label="Comuna / Ciudad" className="sm:col-span-2" dataField="city">
           <Input {...register(f("city"))} placeholder="Providencia" />
         </Field>
         <Field label="Región / Provincia" className="sm:col-span-2">
