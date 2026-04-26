@@ -430,6 +430,7 @@ function PropertyMessagesButton({ propertyId }: { propertyId: number }) {
   const { data: leads = [] } = usePropertyLeads(propertyId);
   const count = leads.length;
   const openCount = leads.filter((l) => l.status === "open").length;
+  const hasNew = openCount > 0;
 
   return (
     <PropertyMessagesDrawer
@@ -445,12 +446,19 @@ function PropertyMessagesButton({ propertyId }: { propertyId: number }) {
             <span
               className={cn(
                 "ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-numbers",
-                openCount > 0
+                hasNew
                   ? "bg-info text-white"
                   : "bg-surface-muted text-foreground-muted",
               )}
             >
               {count}
+            </span>
+          )}
+          {/* Dot rojo pulsante cuando hay consultas abiertas (nuevas/sin atender) */}
+          {hasNew && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-negative opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-negative ring-2 ring-background" />
             </span>
           )}
         </button>

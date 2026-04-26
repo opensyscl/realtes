@@ -51,13 +51,11 @@ export function PropertyMessagesDrawer({
   const openCount = leads.filter((l) => l.status === "open").length;
 
   return (
-    <Drawer>
+    <Drawer position="right">
       <DrawerTrigger render={trigger as React.ReactElement} />
-      <DrawerPopup showBar>
-        <DrawerHeader className="text-center">
-          <DrawerTitle>
-            Consultas de la propiedad
-          </DrawerTitle>
+      <DrawerPopup>
+        <DrawerHeader>
+          <DrawerTitle>Consultas de la propiedad</DrawerTitle>
           <DrawerDescription>
             {isLoading
               ? "Cargando…"
@@ -67,7 +65,7 @@ export function PropertyMessagesDrawer({
           </DrawerDescription>
         </DrawerHeader>
 
-        <div className="mx-auto w-full max-w-[720px] space-y-3 px-4 pb-2">
+        <div className="flex-1 space-y-3 overflow-y-auto px-4 pb-2">
           {isLoading ? (
             Array.from({ length: 3 }).map((_, i) => (
               <Card key={i} className="h-24 animate-pulse bg-surface-muted/40" />
@@ -87,13 +85,10 @@ export function PropertyMessagesDrawer({
           )}
         </div>
 
-        <DrawerFooter
-          className="justify-center sm:justify-center"
-          variant="bare"
-        >
+        <DrawerFooter>
           <DrawerClose render={<Button variant="outline">Cerrar</Button>} />
           {leads.length > 0 && (
-            <Link href="/leads">
+            <Link href="/leads" className="ml-auto">
               <Button>
                 Ir al pipeline
                 <Icon icon={ArrowRight01Icon} size={13} />
