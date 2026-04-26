@@ -43,8 +43,17 @@ export const toast = {
 
   /**
    * Toast que sigue una promise: loading mientras corre, success/error al terminar.
+   * Aplica un mínimo de 800ms al estado loading para evitar flashes.
    */
-  promise: sileo.promise,
+  promise: <T,>(
+    promise: Promise<T> | (() => Promise<T>),
+    opts: Parameters<typeof sileo.promise<T>>[1],
+  ): Promise<T> => {
+    const p = typeof promise === "function" ? promise() : promise;
+    const minDelay = new Promise<void>((r) => setTimeout(r, 800));
+    const padded = Promise.all([p, minDelay]).then(([data]) => data);
+    return sileo.promise<T>(padded, opts);
+  },
 
   /**
    * Confirmación inline (no bloqueante) — toast con dos botones Confirmar/Cancelar.
@@ -138,7 +147,7 @@ export const toast = {
       cancelLabel: opts.cancelLabel,
     });
     if (!ok) return null;
-    return sileo.promise(opts.run(), {
+    return toast.promise(opts.run(), {
       loading: opts.loading ?? { title: "Procesando..." },
       success: (opts.success ?? { title: "Listo" }) as never,
       error: (opts.error ?? ((e: unknown) => ({

@@ -31,7 +31,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <Toaster
           position="top-right"
           theme="dark"
-          options={{ fill: "#1C1F24", roundness: 16 }}
+          options={{
+            fill: "#1C1F24",
+            roundness: 16,
+            styles: {
+              title: "!text-[#26de81] !font-semibold",
+              description: "!text-white/70",
+            },
+          }}
         />
       </TooltipProvider>
     </QueryClientProvider>
