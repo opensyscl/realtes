@@ -46,6 +46,32 @@ Route::prefix('public/{slug}')->group(function () {
     Route::get('/alliances', [PublicController::class, 'alliances']);
 });
 
+// Proxy de imágenes (sirve archivos remotos con headers CORS para
+// canvas/QR generators que requieren `crossOrigin: anonymous`).
+Route::get('/proxy/image', function (\Illuminate\Http\Request $request) {
+    $url = $request->string('url')->toString();
+    $allowed = [
+        'https://pub-96ad29ee143e4d6fb46941738de3daaf.r2.dev/',
+    ];
+    $ok = false;
+    foreach ($allowed as $prefix) {
+        if (str_starts_with($url, $prefix)) {
+            $ok = true;
+            break;
+        }
+    }
+    if (! $ok) {
+        abort(400, 'URL no permitida');
+    }
+    $body = @file_get_contents($url);
+    if ($body === false) abort(502, 'No se pudo descargar la imagen');
+    $type = (new \finfo(FILEINFO_MIME_TYPE))->buffer($body) ?: 'image/png';
+    return response($body, 200)
+        ->header('Content-Type', $type)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Cache-Control', 'public, max-age=86400');
+});
+
 // Property feeds públicos para portales (Idealista, etc.)
 Route::prefix('feeds/{slug}')->group(function () {
     Route::get('/properties.json', [FeedController::class, 'json']);

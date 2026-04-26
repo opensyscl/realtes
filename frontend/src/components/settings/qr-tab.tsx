@@ -24,6 +24,18 @@ import { toast } from "@/lib/toast";
 
 const DEFAULT_URL = "https://valenciapro.cl";
 
+/**
+ * Las URLs públicas de R2 no traen headers CORS, lo que rompe el QR
+ * cuando se usa `crossOrigin: anonymous`. Las pasamos por el proxy
+ * de Laravel que sí los devuelve.
+ */
+function proxyImageUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  if (!url.startsWith("https://pub-")) return url; // sólo proxiar R2
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
+  return `${apiUrl}/api/proxy/image?url=${encodeURIComponent(url)}`;
+}
+
 export function QrTab() {
   const { data } = useAgencyQr();
   const update = useUpdateAgencyQr();
@@ -55,7 +67,7 @@ export function QrTab() {
       height: 280,
       type: "svg",
       data: url || DEFAULT_URL,
-      image: logoUrl || undefined,
+      image: proxyImageUrl(logoUrl),
       dotsOptions: { color: colorMain, type: "rounded" },
       backgroundOptions: { color: colorBg },
       cornersSquareOptions: { color: colorMain, type: "extra-rounded" },
@@ -78,7 +90,7 @@ export function QrTab() {
     if (!qrRef.current) return;
     qrRef.current.update({
       data: url || DEFAULT_URL,
-      image: logoUrl || undefined,
+      image: proxyImageUrl(logoUrl),
       dotsOptions: { color: colorMain, type: "rounded" },
       backgroundOptions: { color: colorBg },
       cornersSquareOptions: { color: colorMain, type: "extra-rounded" },
