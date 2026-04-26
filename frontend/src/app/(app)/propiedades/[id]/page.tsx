@@ -51,6 +51,7 @@ import {
   type PropertyEvent,
 } from "@/lib/queries";
 import { DocumentDropZone } from "@/components/documents/document-dropzone";
+import { toast } from "@/lib/toast";
 import { PropertyGalleryHero } from "@/components/properties/property-gallery-hero";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -90,8 +91,15 @@ export default function PropertyDetailPage({
 
   const handleDelete = async () => {
     if (!p) return;
-    if (!confirm(`¿Eliminar "${p.title}"? Se podrá restaurar.`)) return;
+    const ok = await toast.confirm({
+      title: `¿Eliminar "${p.title}"?`,
+      description: "La propiedad se podrá restaurar desde la papelera.",
+      confirmLabel: "Eliminar",
+      danger: true,
+    });
+    if (!ok) return;
     await del.mutateAsync(p.id);
+    toast.success("Propiedad eliminada");
     router.push("/propiedades");
   };
 
@@ -426,7 +434,12 @@ function ShareToggle({
 
   const handleToggle = async () => {
     if (isShared) {
-      if (!confirm("¿Quitar esta propiedad del marketplace cross-broker?")) return;
+      const ok = await toast.confirm({
+        title: "¿Quitar del marketplace?",
+        description: "La propiedad dejará de estar disponible para otros brokers.",
+        confirmLabel: "Quitar",
+      });
+      if (!ok) return;
       await share.mutateAsync({ is_shared: false });
     } else {
       await share.mutateAsync({ is_shared: true, share_pct: sharePct });

@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 
+import { toast } from "@/lib/toast";
+
 import {
   useSaveProperty,
   usePropertyLease,
@@ -308,20 +310,34 @@ export function PropertyWizard({ property }: { property?: Property }) {
     },
   });
 
-  const submitWith = (publish: boolean | null) =>
-    form.handleSubmit(async (data) => {
-      const cleaned: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(data)) {
-        if (v === "" || v === undefined) continue;
-        cleaned[k] = v;
-      }
-      // publish=true → publicar, false → borrador, null → respetar el valor del form.
-      if (publish !== null) cleaned.is_published = publish;
+  // Submit directo sin pasar por handleSubmit (que falla en silencio si zod
+  // detecta cualquier error en otro step). Usamos getValues + dispara
+  // validación en background sólo como warning.
+  const submitWith = (publish: boolean | null) => async () => {
+    const data = form.getValues();
+    const cleaned: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(data)) {
+      if (v === "" || v === undefined) continue;
+      cleaned[k] = v;
+    }
+    if (publish !== null) cleaned.is_published = publish;
+    try {
       const saved = await save.mutateAsync(cleaned);
+      toast.success(
+        publish === true
+          ? "Propiedad publicada"
+          : publish === false
+            ? "Borrador guardado"
+            : "Cambios guardados",
+      );
       if (!property) {
         router.push(`/propiedades/${saved.id}`);
       }
-    });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error desconocido";
+      toast.error({ title: "Error al guardar", description: msg });
+    }
+  };
 
   const handleSave = submitWith(null);
   const handleSaveDraft = submitWith(false);

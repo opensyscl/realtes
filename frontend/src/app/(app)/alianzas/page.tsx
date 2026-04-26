@@ -32,7 +32,7 @@ import {
   type AllianceInput,
 } from "@/lib/queries";
 import { cn } from "@/lib/utils";
-import { useConfirm } from "@/components/ui/confirm-dialog";
+import { toast } from "@/lib/toast";
 
 type DraftAlliance = AllianceInput & { tempId?: string };
 
@@ -40,16 +40,17 @@ export default function AlianzasPage() {
   const { data: alliances = [], isLoading } = useAlliances();
   const [editingId, setEditingId] = useState<number | "new" | null>(null);
   const remove = useDeleteAlliance();
-  const confirm = useConfirm();
 
   const handleDelete = async (id: number, name: string) => {
-    const ok = await confirm({
+    const ok = await toast.confirm({
       title: "¿Eliminar alianza?",
       description: `La empresa "${name}" se eliminará. Esta acción no se puede deshacer.`,
       confirmLabel: "Eliminar",
       danger: true,
     });
-    if (ok) await remove.mutateAsync(id);
+    if (!ok) return;
+    await remove.mutateAsync(id);
+    toast.success("Alianza eliminada");
   };
 
   const editing =
