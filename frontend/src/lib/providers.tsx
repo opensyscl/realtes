@@ -28,7 +28,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <ConfirmProvider>
           <CommandPaletteProvider>{children}</CommandPaletteProvider>
         </ConfirmProvider>
-        <Toaster position="top-right" />
+        <Toaster
+          position="top-right"
+          theme="dark"
+          options={{ fill: "#1C1F24", roundness: 16 }}
+        />
       </TooltipProvider>
     </QueryClientProvider>
   );

@@ -80,7 +80,7 @@ export const toast = {
       const description = (
         <div className="space-y-2.5">
           {opts.description && (
-            <p className="text-[13px] text-foreground-muted">
+            <p className="text-[13px] leading-relaxed text-white/70">
               {opts.description}
             </p>
           )}
@@ -88,7 +88,7 @@ export const toast = {
             <button
               type="button"
               onClick={() => settle(false)}
-              className="inline-flex h-8 items-center rounded-full border border-border bg-surface px-3 text-[12px] font-medium text-foreground-muted hover:bg-surface-muted"
+              className="inline-flex h-8 items-center rounded-full border border-white/15 bg-white/5 px-3 text-[12px] font-medium text-white/80 transition-colors hover:bg-white/10"
             >
               {opts.cancelLabel ?? "Cancelar"}
             </button>
