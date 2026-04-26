@@ -667,6 +667,23 @@ export function useLeadsBoard(pipelineId?: number) {
   });
 }
 
+/**
+ * Leads filtrados por una propiedad concreta — para mostrar en la bandeja
+ * de mensajes del detalle.
+ */
+export function usePropertyLeads(propertyId: number | null | undefined) {
+  return useQuery({
+    queryKey: ["leads", "by-property", propertyId],
+    enabled: !!propertyId,
+    queryFn: async () => {
+      const res = await api.get<{ data: Lead[] }>("/api/leads", {
+        params: { property_id: propertyId },
+      });
+      return res.data.data;
+    },
+  });
+}
+
 export function useLead(id: number | string | null | undefined) {
   return useQuery({
     queryKey: ["lead", id],

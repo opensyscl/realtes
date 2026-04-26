@@ -51,7 +51,9 @@ import {
   type PropertyEvent,
 } from "@/lib/queries";
 import { DocumentDropZone } from "@/components/documents/document-dropzone";
+import { PropertyMessagesDrawer } from "@/components/properties/property-messages-drawer";
 import { toast } from "@/lib/toast";
+import { usePropertyLeads } from "@/lib/queries";
 import { PropertyGalleryHero } from "@/components/properties/property-gallery-hero";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -131,13 +133,16 @@ export default function PropertyDetailPage({
 
   return (
     <div className="px-6 py-6">
-      {/* Breadcrumb */}
-      <Link
-        href="/propiedades"
-        className="inline-flex items-center gap-1.5 text-xs text-foreground-muted transition-colors hover:text-foreground"
-      >
-        <Icon icon={ArrowLeft01Icon} size={13} /> Propiedades
-      </Link>
+      {/* Breadcrumb + acciones top-right */}
+      <div className="flex items-center justify-between gap-4">
+        <Link
+          href="/propiedades"
+          className="inline-flex items-center gap-1.5 text-xs text-foreground-muted transition-colors hover:text-foreground"
+        >
+          <Icon icon={ArrowLeft01Icon} size={13} /> Propiedades
+        </Link>
+        <PropertyMessagesButton propertyId={p.id} />
+      </div>
 
       {/* Header: título + badges + dirección */}
       <div className="mt-4">
@@ -418,6 +423,39 @@ function AvailabilityToggle({
         </p>
       )}
     </Card>
+  );
+}
+
+function PropertyMessagesButton({ propertyId }: { propertyId: number }) {
+  const { data: leads = [] } = usePropertyLeads(propertyId);
+  const count = leads.length;
+  const openCount = leads.filter((l) => l.status === "open").length;
+
+  return (
+    <PropertyMessagesDrawer
+      propertyId={propertyId}
+      trigger={
+        <button
+          type="button"
+          className="relative inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-foreground transition-colors hover:bg-surface-muted"
+        >
+          <Icon icon={Mail01Icon} size={13} />
+          Mensajes
+          {count > 0 && (
+            <span
+              className={cn(
+                "ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-numbers",
+                openCount > 0
+                  ? "bg-info text-white"
+                  : "bg-surface-muted text-foreground-muted",
+              )}
+            >
+              {count}
+            </span>
+          )}
+        </button>
+      }
+    />
   );
 }
 

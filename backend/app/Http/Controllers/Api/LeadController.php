@@ -37,11 +37,23 @@ class LeadController extends Controller
         if ($pipelineId) {
             $q->where('pipeline_id', $pipelineId);
         }
+        if ($propertyId = $request->integer('property_id')) {
+            $q->where('property_id', $propertyId);
+        }
         if ($status = $request->string('status')->toString()) {
             $q->where('status', $status);
-        } else {
+        } elseif (! $propertyId) {
             // por defecto sólo abiertos en el board
+            // (cuando filtramos por property mostramos todos)
             $q->whereIn('status', ['open']);
+        }
+
+        // Cuando filtramos por property devolvemos lista plana en vez de
+        // agrupada por stage para usarla en la bandeja del detalle.
+        if ($propertyId) {
+            return response()->json([
+                'data' => LeadResource::collection($q->orderByDesc('created_at')->get()),
+            ]);
         }
 
         $leads = $q->get();
