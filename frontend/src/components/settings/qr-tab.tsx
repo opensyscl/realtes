@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import QRCodeStyling from "qr-code-styling";
 import {
   Download01Icon,
   ImageUpload01Icon,
@@ -24,7 +25,7 @@ import { toast } from "@/lib/toast";
 const DEFAULT_URL = "https://valenciapro.cl";
 
 export function QrTab() {
-  const { data, isLoading } = useAgencyQr();
+  const { data } = useAgencyQr();
   const update = useUpdateAgencyQr();
   const upload = useUploadQrLogo();
 
@@ -34,10 +35,8 @@ export function QrTab() {
   const [logoUrl, setLogoUrl] = useState<string>("");
 
   const fileInput = useRef<HTMLInputElement>(null);
-  const previewRef = useRef<HTMLDivElement>(null);
-  // QRCodeStyling se carga dinámicamente porque depende del DOM
-  // (no puede ejecutarse en SSR).
-  const qrRef = useRef<unknown>(null);
+  const [previewEl, setPreviewEl] = useState<HTMLDivElement | null>(null);
+  const qrRef = useRef<QRCodeStyling | null>(null);
 
   // Sincroniza estado local con datos del servidor cuando cargan
   useEffect(() => {
@@ -47,49 +46,45 @@ export function QrTab() {
     setLogoUrl(data.logo_url ?? "");
   }, [data]);
 
-  // Inicializa / actualiza el QR
+  // Inicializa el QR cuando el contenedor entra al DOM
   useEffect(() => {
-    if (!previewRef.current) return;
-    let cancelled = false;
+    if (!previewEl) return;
 
-    (async () => {
-      const QRCodeStyling = (await import("qr-code-styling")).default;
-      if (cancelled) return;
+    const code = new QRCodeStyling({
+      width: 280,
+      height: 280,
+      type: "svg",
+      data: url || DEFAULT_URL,
+      image: logoUrl || undefined,
+      dotsOptions: { color: colorMain, type: "rounded" },
+      backgroundOptions: { color: colorBg },
+      cornersSquareOptions: { color: colorMain, type: "extra-rounded" },
+      cornersDotOptions: { color: colorMain, type: "dot" },
+      imageOptions: { crossOrigin: "anonymous", margin: 8 },
+    });
 
-      const opts = {
-        width: 280,
-        height: 280,
-        type: "svg" as const,
-        data: url || DEFAULT_URL,
-        image: logoUrl || undefined,
-        dotsOptions: { color: colorMain, type: "rounded" as const },
-        backgroundOptions: { color: colorBg },
-        cornersSquareOptions: { color: colorMain, type: "extra-rounded" as const },
-        cornersDotOptions: { color: colorMain, type: "dot" as const },
-        imageOptions: { crossOrigin: "anonymous" as const, margin: 8 },
-      };
-
-      const existing = qrRef.current as
-        | { update: (o: typeof opts) => void }
-        | null;
-      if (existing) {
-        existing.update(opts);
-      } else {
-        const QrCtor = QRCodeStyling as unknown as new (
-          o: typeof opts,
-        ) => { append: (el: HTMLElement) => void; download: (o: { name: string; extension: string }) => void; update: (o: typeof opts) => void };
-        const code = new QrCtor(opts);
-        if (previewRef.current) {
-          previewRef.current.innerHTML = "";
-          code.append(previewRef.current);
-        }
-        qrRef.current = code;
-      }
-    })();
+    previewEl.innerHTML = "";
+    code.append(previewEl);
+    qrRef.current = code;
 
     return () => {
-      cancelled = true;
+      qrRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewEl]);
+
+  // Actualiza el QR cuando cambian los inputs
+  useEffect(() => {
+    if (!qrRef.current) return;
+    qrRef.current.update({
+      data: url || DEFAULT_URL,
+      image: logoUrl || undefined,
+      dotsOptions: { color: colorMain, type: "rounded" },
+      backgroundOptions: { color: colorBg },
+      cornersSquareOptions: { color: colorMain, type: "extra-rounded" },
+      cornersDotOptions: { color: colorMain, type: "dot" },
+      imageOptions: { crossOrigin: "anonymous", margin: 8 },
+    });
   }, [url, colorMain, colorBg, logoUrl]);
 
   const handleSaveDefaults = () => {
@@ -111,10 +106,7 @@ export function QrTab() {
   };
 
   const handleDownload = () => {
-    const code = qrRef.current as
-      | { download: (o: { name: string; extension: string }) => void }
-      | null;
-    code?.download({ name: "qr-valencia", extension: "png" });
+    qrRef.current?.download({ name: "qr-valencia", extension: "png" });
   };
 
   const handleUpload = async (file: File) => {
@@ -128,10 +120,6 @@ export function QrTab() {
     });
     setLogoUrl(r.logo_url);
   };
-
-  if (isLoading) {
-    return <Card className="h-72 animate-pulse bg-surface-muted/40" />;
-  }
 
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_400px]">
@@ -230,10 +218,13 @@ export function QrTab() {
       <Card className="flex flex-col items-center gap-4 p-5">
         <h3 className="text-base font-semibold">Vista previa</h3>
         <div
-          className="rounded-2xl bg-white p-6 shadow-card"
+          className="rounded-2xl p-6 shadow-card"
           style={{ backgroundColor: colorBg }}
         >
-          <div ref={previewRef} className="flex items-center justify-center" />
+          <div
+            ref={setPreviewEl}
+            className="flex h-[280px] w-[280px] items-center justify-center"
+          />
         </div>
         <Button onClick={handleDownload} className="w-full" style={{ backgroundColor: colorMain }}>
           <Icon icon={Download01Icon} size={14} />
