@@ -64,6 +64,7 @@ export function WizardSmartBar({
   saving,
   hasPhotos,
   isPublished,
+  isDirty,
 }: {
   form: UseFormReturn<Record<string, unknown>>;
   steps: WizardStep[];
@@ -75,6 +76,8 @@ export function WizardSmartBar({
   saving?: boolean;
   hasPhotos?: boolean;
   isPublished?: boolean;
+  /** Si false, deshabilita Actualizar/Borrador (no hay cambios pendientes). */
+  isDirty?: boolean;
 }) {
   const values = form.watch();
   const [expanded, setExpanded] = useState(false);
@@ -428,15 +431,24 @@ export function WizardSmartBar({
           </button>
         </Tooltip>
 
-        {/* Guardar borrador (siempre disponible) */}
-        <Tooltip label="Guardar como borrador (no se publica)" side="top">
+        {/* Guardar borrador (deshabilitado si no hay cambios pendientes) */}
+        <Tooltip
+          label={
+            isDirty === false
+              ? "No hay cambios sin guardar"
+              : "Guardar como borrador (no se publica)"
+          }
+          side="top"
+        >
           <button
             type="button"
             onClick={onSaveDraft}
-            disabled={saving}
+            disabled={saving || isDirty === false}
             className={cn(
               "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[12px] font-semibold transition-colors",
-              "bg-accent-foreground/10 hover:bg-accent-foreground/20",
+              isDirty === false
+                ? "cursor-not-allowed bg-accent-foreground/5 text-accent-foreground/40"
+                : "bg-accent-foreground/10 hover:bg-accent-foreground/20",
               saving && "cursor-wait opacity-60",
             )}
           >
@@ -445,33 +457,40 @@ export function WizardSmartBar({
           </button>
         </Tooltip>
 
-        {/* CTA: Publicar (solo si está completo) */}
-        <Tooltip
-          label={
-            isPublishable
-              ? isPublished
+        {/* CTA: Publicar / Actualizar (sólo si publicable y, en modo
+            actualización, sólo si hay cambios pendientes) */}
+        {(() => {
+          const noChangesYetPublished = isPublished && isDirty === false;
+          const disabled =
+            saving || !isPublishable || noChangesYetPublished;
+          const tooltipLabel = noChangesYetPublished
+            ? "No hay cambios para actualizar"
+            : !isPublishable
+              ? "Completa los campos esenciales para publicar"
+              : isPublished
                 ? "Actualizar ficha publicada"
-                : "Publicar la propiedad"
-              : "Completa los campos esenciales para publicar"
-          }
-          side="top"
-        >
-          <button
-            type="button"
-            onClick={onPublish}
-            disabled={saving || !isPublishable}
-            className={cn(
-              "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 text-[12px] font-semibold transition-all",
-              isPublishable
-                ? "bg-positive text-white hover:bg-positive/90"
-                : "cursor-not-allowed bg-accent-foreground/5 text-accent-foreground/40",
-              saving && "cursor-wait opacity-60",
-            )}
-          >
-            <Icon icon={RocketIcon} size={13} />
-            {isPublished ? "Actualizar" : "Publicar"}
-          </button>
-        </Tooltip>
+                : "Publicar la propiedad";
+
+          return (
+            <Tooltip label={tooltipLabel} side="top">
+              <button
+                type="button"
+                onClick={onPublish}
+                disabled={disabled}
+                className={cn(
+                  "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 text-[12px] font-semibold transition-all",
+                  !disabled
+                    ? "bg-positive text-white hover:bg-positive/90"
+                    : "cursor-not-allowed bg-accent-foreground/5 text-accent-foreground/40",
+                  saving && "cursor-wait opacity-60",
+                )}
+              >
+                <Icon icon={RocketIcon} size={13} />
+                {isPublished ? "Actualizar" : "Publicar"}
+              </button>
+            </Tooltip>
+          );
+        })()}
 
         {/* Toggle expand */}
         <Tooltip label={expanded ? "Cerrar panel" : "Ver detalles"} side="top">

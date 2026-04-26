@@ -311,8 +311,7 @@ export function PropertyWizard({ property }: { property?: Property }) {
   });
 
   // Submit directo sin pasar por handleSubmit (que falla en silencio si zod
-  // detecta cualquier error en otro step). Usamos getValues + toast.promise
-  // que muestra loading/success/error con un mínimo de 800ms para el loading.
+  // detecta cualquier error en otro step). Usamos getValues + toast.promise.
   const submitWith = (publish: boolean | null) => async () => {
     const data = form.getValues();
     const cleaned: Record<string, unknown> = {};
@@ -344,17 +343,25 @@ export function PropertyWizard({ property }: { property?: Property }) {
           description: err instanceof Error ? err.message : "Error desconocido",
         }),
       });
+      // Resetea el form al snapshot guardado para que isDirty vuelva a false
+      // y los botones Actualizar/Borrador se deshabiliten hasta que haya
+      // nuevos cambios.
+      form.reset(form.getValues(), { keepValues: true });
       if (!property) {
         router.push(`/propiedades/${saved.id}`);
       }
     } catch {
-      // sileo.promise ya muestra el toast de error; no hace falta hacer nada más
+      // sileo.promise ya muestra el toast de error
     }
   };
 
   const handleSave = submitWith(null);
   const handleSaveDraft = submitWith(false);
   const handlePublish = submitWith(true);
+
+  // ¿Hay cambios sin guardar? — controla si los botones Actualizar/Borrador
+  // están habilitados (no tiene sentido "Actualizar" si no hay nada nuevo).
+  const isDirty = form.formState.isDirty;
 
   // Una vez guardado, todos los steps quedan habilitados.
   // Si es nuevo, los media-steps se muestran pero piden guardar primero.
@@ -438,6 +445,7 @@ export function PropertyWizard({ property }: { property?: Property }) {
       onPreview={() => setPreviewOpen(true)}
       saving={save.isPending}
       isPublished={!!property?.is_published}
+      isDirty={isDirty}
     />
 
     <WizardPreview
