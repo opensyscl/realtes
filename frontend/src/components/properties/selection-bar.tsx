@@ -14,6 +14,7 @@ import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { usePropertySelection } from "@/store/selection";
 import { useBulkProperties, type Property } from "@/lib/queries";
+import { toast } from "@/lib/toast";
 import { cn, formatCurrency } from "@/lib/utils";
 import { CompareDialog } from "./compare-dialog";
 
@@ -43,18 +44,53 @@ export function SelectionBar({ allProperties }: { allProperties: Property[] }) {
 
   const handleStatusChange = async (status: string) => {
     setStatusOpen(false);
-    await bulk.mutateAsync({
-      action: "change_status",
-      ids,
-      payload: { status },
+    const label =
+      STATUS_OPTIONS.find((o) => o.value === status)?.label ?? status;
+    const ok = await toast.confirm({
+      title: `¿Cambiar estado a "${label}"?`,
+      description: `Se aplicará a ${ids.length} propiedad${ids.length === 1 ? "" : "es"} seleccionada${ids.length === 1 ? "" : "s"}.`,
+      confirmLabel: "Cambiar",
     });
-    clear();
+    if (!ok) return;
+    try {
+      await toast.promise(
+        bulk.mutateAsync({ action: "change_status", ids, payload: { status } }),
+        {
+          loading: { title: "Aplicando cambio…" },
+          success: { title: `Estado actualizado a "${label}"` },
+          error: (err: unknown) => ({
+            title: "Error",
+            description: err instanceof Error ? err.message : "",
+          }),
+        },
+      );
+      clear();
+    } catch {
+      // toast ya muestra el error
+    }
   };
 
   const handleArchive = async () => {
-    if (!confirm(`¿Archivar ${ids.length} propiedad(es)?`)) return;
-    await bulk.mutateAsync({ action: "archive", ids });
-    clear();
+    const ok = await toast.confirm({
+      title: `¿Archivar ${ids.length} propiedad${ids.length === 1 ? "" : "es"}?`,
+      description: "Las propiedades archivadas se ocultan del listado pero se podrán restaurar.",
+      confirmLabel: "Archivar",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await toast.promise(bulk.mutateAsync({ action: "archive", ids }), {
+        loading: { title: "Archivando…" },
+        success: { title: "Propiedades archivadas" },
+        error: (err: unknown) => ({
+          title: "Error",
+          description: err instanceof Error ? err.message : "",
+        }),
+      });
+      clear();
+    } catch {
+      // toast ya muestra el error
+    }
   };
 
   const handleExportCsv = () => {
