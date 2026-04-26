@@ -153,6 +153,7 @@ export default function PropertiesPage() {
 
       {/* Filtros */}
       <Card className="mb-4 flex flex-wrap items-center gap-3 p-3">
+        <SelectAllToggle visibleIds={data?.data.map((p) => p.id) ?? []} />
         <div className="min-w-64 flex-1">
           <Input
             placeholder="Buscar por título, código o dirección..."
@@ -330,6 +331,66 @@ function StatBox({
         </div>
       </div>
     </Card>
+  );
+}
+
+function SelectAllToggle({ visibleIds }: { visibleIds: number[] }) {
+  const idsSet = usePropertySelection((s) => s.ids);
+  const setMany = usePropertySelection((s) => s.setMany);
+  const clear = usePropertySelection((s) => s.clear);
+
+  const total = visibleIds.length;
+  const selectedHere = visibleIds.filter((id) => idsSet.has(id)).length;
+  const allSelected = total > 0 && selectedHere === total;
+  const someSelected = selectedHere > 0 && !allSelected;
+
+  const handleClick = () => {
+    if (allSelected) {
+      // Deseleccionar sólo los visibles preservando otras selecciones.
+      const remaining = Array.from(idsSet).filter(
+        (id) => !visibleIds.includes(id),
+      );
+      clear();
+      if (remaining.length) setMany(remaining);
+    } else {
+      setMany(visibleIds);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      title={
+        allSelected
+          ? "Deseleccionar visibles"
+          : `Seleccionar ${total} visible${total === 1 ? "" : "s"}`
+      }
+      className={cn(
+        "flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border transition-colors",
+        allSelected
+          ? "border-foreground bg-foreground text-accent-foreground"
+          : someSelected
+            ? "border-foreground/40 bg-surface text-foreground"
+            : "border-border bg-surface text-foreground-muted hover:bg-surface-muted",
+      )}
+      aria-checked={allSelected ? "true" : someSelected ? "mixed" : "false"}
+      role="checkbox"
+    >
+      {allSelected ? (
+        <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
+          <path
+            d="M2 6.5L4.5 9L10 3.5"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ) : someSelected ? (
+        <span className="h-0.5 w-3 rounded-full bg-current" />
+      ) : null}
+    </button>
   );
 }
 

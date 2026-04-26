@@ -103,7 +103,7 @@ export function SelectionBar({ allProperties }: { allProperties: Property[] }) {
   return (
     <>
       <div className="fixed bottom-4 left-1/2 z-40 -translate-x-1/2">
-        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-foreground py-2 pl-4 pr-2 text-accent-foreground shadow-2xl ring-1 ring-black/5">
+        <div className="flex items-center gap-2 rounded-full border border-[#676767] bg-foreground py-2 pl-4 pr-2 text-accent-foreground shadow-2xl ring-1 ring-black/5">
           <span className="text-sm font-medium">
             <span className="tabular-numbers">{ids.length}</span> seleccionada
             {ids.length !== 1 && "s"}

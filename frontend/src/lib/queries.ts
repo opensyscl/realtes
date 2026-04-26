@@ -783,13 +783,14 @@ export function useAddLeadActivity(leadId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: {
-      type: "note" | "call" | "email" | "meeting" | "visit_scheduled";
+      type: "note" | "call" | "email" | "meeting" | "visit_scheduled" | "message_in" | "message_out";
       title?: string;
       body?: string;
     }) => api.post(`/api/leads/${leadId}/activities`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lead-activities", leadId] });
       qc.invalidateQueries({ queryKey: ["lead", leadId] });
+      qc.invalidateQueries({ queryKey: ["leads", "by-property"] });
     },
   });
 }

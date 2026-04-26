@@ -381,7 +381,7 @@ class LeadController extends Controller
     public function storeActivity(Request $request, Lead $lead): JsonResponse
     {
         $data = $request->validate([
-            'type' => ['required', Rule::in(['note', 'call', 'email', 'meeting', 'visit_scheduled'])],
+            'type' => ['required', Rule::in(['note', 'call', 'email', 'meeting', 'visit_scheduled', 'message_in', 'message_out'])],
             'title' => ['nullable', 'string', 'max:160'],
             'body' => ['nullable', 'string'],
             'occurred_at' => ['nullable', 'date'],
