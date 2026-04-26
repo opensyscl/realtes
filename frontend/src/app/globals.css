@@ -1,0 +1,291 @@
+@import "tailwindcss";
+@import "../lib/image-tool/image-tool.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ---------- Euclid Circular B (tipografía del proyecto) ---------- */
+@font-face {
+  font-family: "Euclid Circular B";
+  src: url("/fonts/euclidcircularb-light.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Euclid Circular B";
+  src: url("/fonts/euclidcircularb-regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Euclid Circular B";
+  src: url("/fonts/euclidcircularb-regular-italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Euclid Circular B";
+  src: url("/fonts/euclidcircularb-medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Euclid Circular B";
+  src: url("/fonts/euclidcircularb-semibold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- Design tokens ---------- */
+:root {
+  /* Paleta base */
+  --neutral-100: #ffffff;
+  --neutral-200: #f9f9f9;
+  --neutral-300: #f6f6f6;
+  --neutral-400: #e9e9e9;
+  --neutral-500: #b7b7b7;
+  --neutral-600: #8d8d91;
+  --neutral-700: #616066;
+  --neutral-800: #444444;
+  --primary-1: #f85757;
+  --primary-soft: #ffe9e9;
+
+  /* Sombras del sistema */
+  --shadow-card: 0 4px 16px -4px #080f340f;
+  --shadow-button-secondary: 0 1px 2px #14142b12;
+  --shadow-image: 0 6px 18px -6px #00000024;
+  --shadow-badge: 0 1px 2px #14142b17;
+
+  /* Tokens semánticos mapeados a la paleta */
+  --color-background: var(--neutral-200);
+  --color-surface: var(--neutral-100);
+  --color-surface-muted: var(--neutral-300);
+  --color-border: var(--neutral-400);
+  --color-border-subtle: var(--neutral-300);
+  --color-foreground: var(--neutral-800);
+  --color-foreground-muted: var(--neutral-600);
+  --color-muted: var(--neutral-700);
+  --color-muted-foreground: var(--neutral-500);
+  --color-accent: var(--primary-1);
+  --color-accent-foreground: var(--neutral-100);
+  --color-primary: var(--primary-1);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-foreground: #ffffff;
+  --color-positive: #15a86c;
+  --color-positive-soft: #e7f7ef;
+  --color-negative: #dc3545;
+  --color-negative-soft: #fdebed;
+  --color-warning: #e0a800;
+  --color-warning-soft: #fdf4d8;
+  --color-info: #2563eb;
+  --color-info-soft: #e6ecfc;
+
+  /* Sidebar — gris oscuro elegante, no puro negro */
+  --color-sidebar: #1c1f24;
+  --color-sidebar-foreground: #e9eaec;
+
+  /* Tokens shadcn (mapeados al sistema) — usados por componentes de @coss/shadcn */
+  --color-input: var(--neutral-400);
+  --color-popover: var(--neutral-100);
+  --color-popover-foreground: var(--neutral-800);
+  --color-ring: var(--primary-1);
+  --color-destructive: #dc3545;
+  --color-destructive-foreground: var(--neutral-100);
+
+  /* Brand gold — usado solo en la landing pública */
+  --gold: #c9a96e;
+  --gold-soft: #f0e3cc;
+  --destructive-foreground: var(--color-red-700);
+}
+
+@theme inline {
+  /* Paleta cruda (utilidades como bg-neutral-300, text-primary) */
+  --color-neutral-100: var(--neutral-100);
+  --color-neutral-200: var(--neutral-200);
+  --color-neutral-300: var(--neutral-300);
+  --color-neutral-400: var(--neutral-400);
+  --color-neutral-500: var(--neutral-500);
+  --color-neutral-600: var(--neutral-600);
+  --color-neutral-700: var(--neutral-700);
+  --color-neutral-800: var(--neutral-800);
+  --color-primary: var(--primary-1);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-foreground: var(--color-primary-foreground);
+
+  /* Tokens semánticos */
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+  --color-surface-muted: var(--color-surface-muted);
+  --color-border: var(--color-border);
+  --color-border-subtle: var(--color-border-subtle);
+  --color-foreground: var(--color-foreground);
+  --color-foreground-muted: var(--color-foreground-muted);
+  --color-muted: var(--color-muted);
+  --color-muted-foreground: var(--color-muted-foreground);
+  --color-accent: var(--color-accent);
+  --color-accent-foreground: var(--color-accent-foreground);
+  --color-positive: var(--color-positive);
+  --color-positive-soft: var(--color-positive-soft);
+  --color-negative: var(--color-negative);
+  --color-negative-soft: var(--color-negative-soft);
+  --color-warning: var(--color-warning);
+  --color-warning-soft: var(--color-warning-soft);
+  --color-info: var(--color-info);
+  --color-info-soft: var(--color-info-soft);
+  --color-sidebar: var(--color-sidebar);
+  --color-sidebar-foreground: var(--color-sidebar-foreground);
+
+  /* Tokens shadcn expuestos como utilidades */
+  --color-input: var(--color-input);
+  --color-popover: var(--color-popover);
+  --color-popover-foreground: var(--color-popover-foreground);
+  --color-ring: var(--color-ring);
+  --color-destructive: var(--color-destructive);
+  --color-destructive-foreground: var(--color-destructive-foreground);
+
+  --font-sans: "Euclid Circular B", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+
+  --radius: 0.625rem;
+  --radius-sm: calc(var(--radius) - 0.25rem);
+  --radius-md: calc(var(--radius) - 0.125rem);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 0.25rem);
+  --radius-card: 1.5rem;
+
+  --shadow-card: var(--shadow-card);
+  --shadow-button-secondary: var(--shadow-button-secondary);
+  --shadow-image: var(--shadow-image);
+  --shadow-badge: var(--shadow-badge);
+}
+
+/* ---------- Base ---------- */
+* {
+  border-color: var(--color-border);
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  /* Sin antialiased: la tipografía se ve más nítida y con cuerpo (subpixel rendering nativo) */
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: geometricPrecision;
+}
+
+/* scrollbar delgado estilo Kravio */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #e3e3e3;
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #c9c9c9;
+}
+
+/* numerical tabular en tablas y KPIs */
+.tabular-numbers {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Tooltip de Radix - animación smooth de slide-in según el side */
+.rsv-tooltip {
+  --tooltip-translate: 4px;
+  animation-duration: 180ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: both;
+  transform-origin: var(--radix-tooltip-content-transform-origin);
+}
+.rsv-tooltip[data-state="delayed-open"][data-side="right"] {
+  animation-name: rsv-tt-from-left;
+}
+.rsv-tooltip[data-state="delayed-open"][data-side="left"] {
+  animation-name: rsv-tt-from-right;
+}
+.rsv-tooltip[data-state="delayed-open"][data-side="top"] {
+  animation-name: rsv-tt-from-bottom;
+}
+.rsv-tooltip[data-state="delayed-open"][data-side="bottom"] {
+  animation-name: rsv-tt-from-top;
+}
+.rsv-tooltip[data-state="closed"] {
+  animation-name: rsv-tt-out;
+  animation-duration: 120ms;
+}
+@keyframes rsv-tt-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--tooltip-translate) * -1)) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+@keyframes rsv-tt-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(var(--tooltip-translate)) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+@keyframes rsv-tt-from-bottom {
+  from {
+    opacity: 0;
+    transform: translateY(var(--tooltip-translate)) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes rsv-tt-from-top {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--tooltip-translate) * -1)) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes rsv-tt-out {
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+/* Animación waving emoji 👋 estilo AlterEstate */
+@keyframes wave {
+  0% { transform: rotate(0deg); }
+  10% { transform: rotate(14deg); }
+  20% { transform: rotate(-8deg); }
+  30% { transform: rotate(14deg); }
+  40% { transform: rotate(-4deg); }
+  50% { transform: rotate(10deg); }
+  60% { transform: rotate(0deg); }
+  100% { transform: rotate(0deg); }
+}
+.animate-wave {
+  animation: wave 2.5s ease-in-out infinite;
+  transform-origin: 70% 70%;
+}
+
+.dark {
+  --destructive-foreground: var(--color-red-400);
+}
