@@ -328,7 +328,7 @@ export function WizardSmartBar({
       )}
 
       {/* Barra principal */}
-      <div className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-border bg-foreground py-2 pl-2 pr-2 text-accent-foreground shadow-2xl">
+      <div className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/10 bg-foreground py-2 pl-2 pr-2 text-accent-foreground shadow-2xl ring-1 ring-black/5">
         {/* Progreso circular */}
         <Tooltip label="Ver detalles del progreso" side="top">
           <button
