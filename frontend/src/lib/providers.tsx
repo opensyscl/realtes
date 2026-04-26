@@ -29,14 +29,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <CommandPaletteProvider>{children}</CommandPaletteProvider>
         </ConfirmProvider>
         <Toaster
-          position="top-right"
+          position="top-center"
           theme="dark"
           options={{
             fill: "#1C1F24",
             roundness: 16,
             styles: {
-              title: "!text-[#26de81] !font-semibold",
-              description: "!text-white/70",
+              title: "!text-white !font-medium !font-sans !text-[14px] !tracking-tight",
+              description: "!text-white/65 !font-sans !text-[12px]",
             },
           }}
         />
