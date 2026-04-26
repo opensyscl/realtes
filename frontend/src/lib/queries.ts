@@ -2284,6 +2284,95 @@ export function useDeleteWatermarkImage() {
 }
 
 // ===========================================================
+// Alliances (alianzas comerciales con beneficios)
+// ===========================================================
+export interface Alliance {
+  id: number;
+  name: string;
+  logo_url: string | null;
+  description: string | null;
+  benefit_title: string | null;
+  benefit_image_url: string | null;
+  benefit_detail: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  instagram: string | null;
+  website_url: string | null;
+  is_published: boolean;
+  sort_order: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type AllianceInput = Partial<
+  Omit<Alliance, "id" | "created_at" | "updated_at">
+>;
+
+export function useAlliances() {
+  return useQuery({
+    queryKey: ["alliances"],
+    queryFn: async () => {
+      const res = await api.get<{ data: Alliance[] }>("/api/alliances");
+      return res.data.data;
+    },
+  });
+}
+
+export function useSaveAlliance(id?: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: AllianceInput) => {
+      const res = id
+        ? await api.patch<{ data: Alliance }>(`/api/alliances/${id}`, data)
+        : await api.post<{ data: Alliance }>("/api/alliances", data);
+      return res.data.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["alliances"] });
+    },
+  });
+}
+
+export function useDeleteAlliance() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.delete(`/api/alliances/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["alliances"] }),
+  });
+}
+
+export function useUploadAllianceImage() {
+  return useMutation({
+    mutationFn: async ({
+      file,
+      kind,
+    }: {
+      file: File;
+      kind: "logo" | "benefit";
+    }) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("kind", kind);
+      const res = await api.post<{ data: { url: string; key: string } }>(
+        "/api/alliances/_image",
+        fd,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      return res.data.data;
+    },
+  });
+}
+
+export function useReorderAlliances() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (order: number[]) =>
+      api.post("/api/alliances/_reorder", { order }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["alliances"] }),
+  });
+}
+
+// ===========================================================
 // API Tokens (Personal Access Tokens para uso externo)
 // ===========================================================
 export interface ApiToken {

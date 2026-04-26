@@ -144,6 +144,33 @@ class PublicController extends Controller
         return response()->json(['data' => $data]);
     }
 
+    public function alliances(string $slug): JsonResponse
+    {
+        $agency = Agency::where('slug', $slug)->where('active', true)->firstOrFail();
+
+        $rows = \App\Models\Alliance::withoutGlobalScopes()
+            ->where('agency_id', $agency->id)
+            ->where('is_published', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($a) => [
+                'id' => $a->id,
+                'name' => $a->name,
+                'logo_url' => $a->logo_url,
+                'description' => $a->description,
+                'benefit_title' => $a->benefit_title,
+                'benefit_image_url' => $a->benefit_image_url,
+                'benefit_detail' => $a->benefit_detail,
+                'phone' => $a->phone,
+                'whatsapp' => $a->whatsapp,
+                'instagram' => $a->instagram,
+                'website_url' => $a->website_url,
+            ]);
+
+        return response()->json(['data' => $rows]);
+    }
+
     public function storeLead(Request $request, string $slug): JsonResponse
     {
         $agency = Agency::where('slug', $slug)->where('active', true)->firstOrFail();

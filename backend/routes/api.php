@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AgencySettingsController;
+use App\Http\Controllers\Api\AllianceController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CalendarController;
 use App\Http\Controllers\Api\ChargeController;
@@ -42,6 +43,7 @@ Route::prefix('public/{slug}')->group(function () {
     // Throttle por IP (no global) para evitar bloquear escaparates con tráfico legítimo
     Route::post('/leads', [PublicController::class, 'storeLead'])
         ->middleware('throttle:public-leads');
+    Route::get('/alliances', [PublicController::class, 'alliances']);
 });
 
 // Property feeds públicos para portales (Idealista, etc.)
@@ -74,6 +76,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/uploads/property-cover', [UploadController::class, 'propertyCover']);
 
     // Personal Access Tokens (API keys para uso externo)
+    // Alianzas
+    Route::get('/alliances', [AllianceController::class, 'index']);
+    Route::post('/alliances', [AllianceController::class, 'store']);
+    Route::get('/alliances/{alliance}', [AllianceController::class, 'show']);
+    Route::patch('/alliances/{alliance}', [AllianceController::class, 'update']);
+    Route::delete('/alliances/{alliance}', [AllianceController::class, 'destroy']);
+    Route::post('/alliances/_image', [AllianceController::class, 'uploadImage']);
+    Route::post('/alliances/_reorder', [AllianceController::class, 'reorder']);
+
     Route::get('/tokens', [TokenController::class, 'index']);
     Route::post('/tokens', [TokenController::class, 'store']);
     Route::delete('/tokens/{id}', [TokenController::class, 'destroy'])->whereNumber('id');
