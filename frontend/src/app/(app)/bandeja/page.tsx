@@ -13,7 +13,7 @@ import {
   ArrowUp02Icon,
   CheckmarkCircle02Icon,
   StarIcon,
-  Filter02Icon,
+  FilterIcon,
 } from "@hugeicons/core-free-icons";
 
 import { Card } from "@/components/ui/card";
@@ -117,7 +117,7 @@ export default function BandejaPage() {
             />
             <div className="flex flex-wrap items-center gap-1.5">
               <Icon
-                icon={Filter02Icon}
+                icon={FilterIcon}
                 size={11}
                 className="text-foreground-muted"
               />

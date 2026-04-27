@@ -16,6 +16,7 @@ import {
   Calendar01Icon,
   AnalyticsUpIcon,
   Mail01Icon,
+  InboxIcon,
   Building03Icon,
   GiftIcon,
   Settings01Icon,
@@ -64,6 +65,7 @@ const SECTIONS: NavSection[] = [
   {
     title: "CRM",
     items: [
+      { label: "Bandeja de entrada", href: "/bandeja", icon: InboxIcon },
       { label: "Leads / Pipeline", href: "/leads", icon: UserGroup02Icon },
       { label: "Visitas", href: "/visitas", icon: Calendar01Icon },
       { label: "Marketplace", href: "/marketplace", icon: Building03Icon },
@@ -127,7 +129,7 @@ export function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3">
+      <nav className="scrollbar-hide flex-1 overflow-y-auto py-3">
         {SECTIONS.map((section, si) => (
           <div key={si} className="mb-3">
             {expanded && section.title && (
@@ -184,7 +186,7 @@ export function Sidebar() {
       </nav>
 
       {/* Support */}
-      <div className="border-t border-sidebar-foreground/[0.06] py-2">
+      <div className="py-2">
         <ul className="flex flex-col gap-0.5 px-2">
           {SUPPORT_ITEMS.map((item) => {
             const active = isActive(item.href);
@@ -220,7 +222,7 @@ export function Sidebar() {
       </div>
 
       {/* User */}
-      <div className="border-t border-sidebar-foreground/[0.06] p-2">
+      <div className="p-2">
         <div className="relative">
           <button
             onClick={() => setUserMenu((o) => !o)}
