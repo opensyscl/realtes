@@ -15,12 +15,14 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Icon } from "@/components/ui/icon";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   useDocuments,
   useUploadDocument,
   useDeleteDocument,
   type Document,
 } from "@/lib/queries";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 type Owner = "properties" | "contracts";
@@ -45,33 +47,99 @@ const CATEGORIES = [
   "otros",
 ];
 
+const MAX_BYTES = 10 * 1024 * 1024; // 10MB (debe coincidir con backend)
+
 export function DocumentDropZone({ owner, ownerId }: Props) {
   const { data, isLoading } = useDocuments(owner, ownerId);
   const upload = useUploadDocument(owner, ownerId);
   const del = useDeleteDocument();
+  const confirm = useConfirm();
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
-  const [pending, setPending] = useState<File | null>(null);
+  const [pending, setPending] = useState<File[]>([]);
   const [category, setCategory] = useState<string>("otros");
   const [description, setDescription] = useState<string>("");
 
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    setPending(files[0]);
+    const accepted: File[] = [];
+    const rejected: string[] = [];
+    Array.from(files).forEach((f) => {
+      if (f.size > MAX_BYTES) rejected.push(f.name);
+      else accepted.push(f);
+    });
+    if (rejected.length) {
+      toast.error({
+        title: `${rejected.length} archivo(s) demasiado grandes`,
+        description: `Máximo 10MB · ${rejected.join(", ")}`,
+      });
+    }
+    if (accepted.length) setPending((prev) => [...prev, ...accepted]);
+  };
+
+  const removePending = (idx: number) => {
+    setPending((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const submitUpload = async () => {
-    if (!pending) return;
-    await upload.mutateAsync({
-      file: pending,
-      category,
-      description: description || undefined,
-    });
-    setPending(null);
-    setDescription("");
-    setCategory("otros");
+    if (pending.length === 0) return;
+    const files = pending;
+    const cat = category;
+    const desc = description.trim();
+
+    try {
+      await toast.promise(
+        Promise.all(
+          files.map((file) =>
+            upload.mutateAsync({
+              file,
+              category: cat,
+              description: desc || undefined,
+            }),
+          ),
+        ),
+        {
+          loading: {
+            title: `Subiendo ${files.length} documento${files.length > 1 ? "s" : ""}...`,
+          },
+          success: {
+            title:
+              files.length === 1
+                ? "Documento subido"
+                : `${files.length} documentos subidos`,
+          },
+          error: { title: "Error al subir el documento" },
+        },
+      );
+
+      setPending([]);
+      setDescription("");
+      setCategory("otros");
+      if (inputRef.current) inputRef.current.value = "";
+    } catch {
+      // toast.promise ya muestra el error; no re-lanzamos para no
+      // tirar un unhandled rejection en consola.
+    }
   };
+
+  const handleDelete = async (doc: Document) => {
+    const ok = await confirm({
+      title: "¿Eliminar documento?",
+      description: `${doc.name} se borrará de la propiedad y del almacenamiento.`,
+      confirmLabel: "Eliminar",
+      danger: true,
+    });
+    if (!ok) return;
+
+    await toast.promise(del.mutateAsync(doc.id), {
+      loading: { title: "Eliminando..." },
+      success: { title: "Documento eliminado" },
+      error: { title: "No se pudo eliminar" },
+    });
+  };
+
+  const docs = data ?? [];
 
   return (
     <div className="space-y-4">
@@ -95,22 +163,30 @@ export function DocumentDropZone({ owner, ownerId }: Props) {
             : "border-border hover:border-foreground/30",
         )}
       >
-        {pending ? (
+        {pending.length > 0 ? (
           <div className="space-y-3">
-            <div className="flex items-center justify-center gap-2 text-sm">
-              <Icon icon={File02Icon} size={16} />
-              <span className="font-medium">{pending.name}</span>
-              <span className="text-xs text-muted-foreground">
-                {formatSize(pending.size)}
-              </span>
-              <button
-                onClick={() => setPending(null)}
-                className="ml-1 text-muted-foreground hover:text-negative"
-                aria-label="Quitar archivo"
-              >
-                <Icon icon={Cancel01Icon} size={13} />
-              </button>
-            </div>
+            <ul className="space-y-1.5">
+              {pending.map((f, i) => (
+                <li
+                  key={`${f.name}-${i}`}
+                  className="flex items-center justify-center gap-2 text-sm"
+                >
+                  <Icon icon={File02Icon} size={14} />
+                  <span className="font-medium">{f.name}</span>
+                  <span className="text-xs text-foreground-muted">
+                    {formatSize(f.size)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removePending(i)}
+                    className="ml-1 text-foreground-muted hover:text-negative"
+                    aria-label="Quitar archivo"
+                  >
+                    <Icon icon={Cancel01Icon} size={13} />
+                  </button>
+                </li>
+              ))}
+            </ul>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <NativeSelect
                 value={category}
@@ -128,13 +204,24 @@ export function DocumentDropZone({ owner, ownerId }: Props) {
                 placeholder="Descripción (opcional)"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="h-10 rounded-full border border-border bg-surface px-4 text-xs outline-none placeholder:text-muted-foreground focus:border-foreground/40"
+                className="h-10 rounded-full border border-border bg-surface px-4 text-xs outline-none placeholder:text-foreground-muted focus:border-foreground/40"
               />
             </div>
-            <Button onClick={submitUpload} disabled={upload.isPending}>
-              <Icon icon={CloudUploadIcon} size={14} />
-              {upload.isPending ? "Subiendo..." : "Subir documento"}
-            </Button>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => inputRef.current?.click()}
+                disabled={upload.isPending}
+              >
+                Añadir más
+              </Button>
+              <Button onClick={submitUpload} disabled={upload.isPending}>
+                <Icon icon={CloudUploadIcon} size={14} />
+                {upload.isPending
+                  ? "Subiendo..."
+                  : `Subir ${pending.length} documento${pending.length > 1 ? "s" : ""}`}
+              </Button>
+            </div>
           </div>
         ) : (
           <button
@@ -146,16 +233,17 @@ export function DocumentDropZone({ owner, ownerId }: Props) {
               <Icon icon={CloudUploadIcon} size={20} />
             </div>
             <div className="mt-3 text-sm font-medium">
-              Arrastra un archivo aquí o haz clic para seleccionar
+              Arrastra archivos aquí o haz clic para seleccionar
             </div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              Hasta 10MB · PDF, imágenes, documentos.
+            <div className="mt-1 text-xs text-foreground-muted">
+              Hasta 10MB cada uno · PDF, imágenes, documentos.
             </div>
           </button>
         )}
         <input
           ref={inputRef}
           type="file"
+          multiple
           className="hidden"
           onChange={(e) => handleFiles(e.target.files)}
           accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
@@ -165,14 +253,18 @@ export function DocumentDropZone({ owner, ownerId }: Props) {
       {/* List */}
       {isLoading ? (
         <Card className="h-32 animate-pulse bg-surface-muted/50" />
-      ) : (data?.length ?? 0) === 0 ? (
+      ) : docs.length === 0 ? (
         <Card className="p-8 text-center text-sm text-foreground-muted">
           No hay documentos todavía. Sube el primero arriba.
         </Card>
       ) : (
         <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {data!.map((doc) => (
-            <DocumentRow key={doc.id} doc={doc} onDelete={() => del.mutate(doc.id)} />
+          {docs.map((doc) => (
+            <DocumentRow
+              key={doc.id}
+              doc={doc}
+              onDelete={() => handleDelete(doc)}
+            />
           ))}
         </ul>
       )}
@@ -197,7 +289,7 @@ function DocumentRow({ doc, onDelete }: { doc: Document; onDelete: () => void })
             {doc.category.replace(/_/g, " ")}
           </span>
         </div>
-        <div className="truncate text-[11px] text-muted-foreground">
+        <div className="truncate text-[11px] text-foreground-muted">
           {doc.description ?? doc.file_name} · {formatSize(doc.size)} ·{" "}
           {new Date(doc.created_at).toLocaleDateString("es-ES")}
         </div>
@@ -206,17 +298,15 @@ function DocumentRow({ doc, onDelete }: { doc: Document; onDelete: () => void })
         href={doc.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-surface-muted hover:text-foreground"
+        className="flex h-8 w-8 items-center justify-center rounded-full text-foreground-muted hover:bg-surface-muted hover:text-foreground"
         aria-label="Abrir"
       >
         <Icon icon={Download01Icon} size={14} />
       </a>
       <button
         type="button"
-        onClick={() => {
-          if (confirm(`¿Eliminar ${doc.name}?`)) onDelete();
-        }}
-        className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-negative-soft hover:text-negative"
+        onClick={onDelete}
+        className="flex h-8 w-8 items-center justify-center rounded-full text-foreground-muted hover:bg-negative-soft hover:text-negative"
         aria-label="Eliminar"
       >
         <Icon icon={Delete02Icon} size={14} />

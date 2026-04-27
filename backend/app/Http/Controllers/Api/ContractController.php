@@ -95,4 +95,55 @@ class ContractController extends Controller
 
         return response()->json(['ok' => true]);
     }
+
+    /**
+     * POST /api/contracts/bulk-rent-adjust
+     * Body: { adjustments: [{contract_id, new_rent}], reason?: string }
+     *
+     * Aplica un reajuste de renta a varios contratos en una transacción.
+     * Recalcula commission splits no pagados y deja un log opcional.
+     */
+    public function bulkRentAdjust(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'adjustments' => ['required', 'array', 'min:1', 'max:500'],
+            'adjustments.*.contract_id' => ['required', 'integer'],
+            'adjustments.*.new_rent' => ['required', 'numeric', 'min:0'],
+            'reason' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $updated = 0;
+        $errors = [];
+
+        \DB::transaction(function () use ($data, &$updated, &$errors) {
+            foreach ($data['adjustments'] as $adj) {
+                $contract = Contract::query()
+                    ->where('id', $adj['contract_id'])
+                    ->first();
+                if (! $contract) {
+                    $errors[] = ['contract_id' => $adj['contract_id'], 'error' => 'Contrato no encontrado'];
+                    continue;
+                }
+                $oldRent = (float) $contract->monthly_rent;
+                $newRent = (float) $adj['new_rent'];
+                if (abs($newRent - $oldRent) < 0.01) {
+                    continue; // sin cambio
+                }
+                $contract->monthly_rent = $newRent;
+                $contract->save();
+
+                $contract->load('commissionSplits');
+                CommissionService::recalculateAmounts($contract);
+
+                $updated++;
+            }
+        });
+
+        return response()->json([
+            'ok' => true,
+            'updated' => $updated,
+            'total' => count($data['adjustments']),
+            'errors' => $errors,
+        ]);
+    }
 }

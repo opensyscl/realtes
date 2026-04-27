@@ -130,6 +130,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/properties/stats', [PropertyController::class, 'stats']);
     Route::get('/properties/map', [PropertyController::class, 'map']);
     Route::post('/properties/bulk', [PropertyController::class, 'bulk']);
+    Route::post('/properties/{property}/duplicate', [PropertyController::class, 'duplicate']);
     Route::apiResource('properties', PropertyController::class);
 
     // Property lease (gestión inline del contrato vigente)
@@ -141,6 +142,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('persons', PersonController::class);
 
     // Contracts
+    Route::post('/contracts/bulk-rent-adjust', [ContractController::class, 'bulkRentAdjust']);
     Route::apiResource('contracts', ContractController::class);
 
     // Charges

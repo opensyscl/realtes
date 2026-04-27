@@ -6,6 +6,7 @@ import { use, useState } from "react";
 import {
   ArrowLeft01Icon,
   Edit02Icon,
+  UserGroup02Icon,
   Delete02Icon,
   PropertyNewIcon,
   Building03Icon,
@@ -440,8 +441,8 @@ function PropertyMessagesButton({ propertyId }: { propertyId: number }) {
           type="button"
           className="relative inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-foreground transition-colors hover:bg-surface-muted"
         >
-          <Icon icon={Mail01Icon} size={13} />
-          Mensajes
+          <Icon icon={UserGroup02Icon} size={13} />
+          Interesados
           {count > 0 && (
             <span
               className={cn(
@@ -454,7 +455,6 @@ function PropertyMessagesButton({ propertyId }: { propertyId: number }) {
               {count}
             </span>
           )}
-          {/* Dot rojo pulsante cuando hay consultas abiertas (nuevas/sin atender) */}
           {hasNew && (
             <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-negative opacity-75" />

@@ -10,6 +10,8 @@ import {
   ArrowLeft01Icon,
   UserCircleIcon,
   ArrowUp02Icon,
+  CheckmarkCircle02Icon,
+  StarIcon,
 } from "@hugeicons/core-free-icons";
 
 import {
@@ -31,6 +33,7 @@ import {
   usePropertyLeads,
   useLeadActivities,
   useAddLeadActivity,
+  useSaveLead,
   type Lead,
   type LeadActivity,
 } from "@/lib/queries";
@@ -49,6 +52,44 @@ const STATUS_LABEL: Record<string, string> = {
   lost: "Perdido",
 };
 
+function TabBtn({
+  active,
+  onClick,
+  label,
+  count,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count: number;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "relative inline-flex items-center gap-1.5 px-3 py-2.5 text-[12px] font-medium transition-colors",
+        active ? "text-foreground" : "text-foreground-muted hover:text-foreground",
+      )}
+    >
+      {label}
+      <span
+        className={cn(
+          "inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-numbers",
+          active
+            ? "bg-foreground text-accent-foreground"
+            : "bg-surface-muted text-foreground-muted",
+        )}
+      >
+        {count}
+      </span>
+      {active && (
+        <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-foreground" />
+      )}
+    </button>
+  );
+}
+
 export function PropertyMessagesDrawer({
   propertyId,
   trigger,
@@ -58,8 +99,17 @@ export function PropertyMessagesDrawer({
 }) {
   const { data: leads = [], isLoading } = usePropertyLeads(propertyId);
   const [activeLeadId, setActiveLeadId] = useState<number | null>(null);
-  const total = leads.length;
-  const openCount = leads.filter((l) => l.status === "open").length;
+  const [tab, setTab] = useState<"consultas" | "interesados">("consultas");
+
+  // Heurística: un lead se considera "interesado" si el agente ya lo
+  // calificó (probability_pct >= 50) o si fue ganado/convertido.
+  const isInterested = (l: Lead) =>
+    (l.probability_pct ?? 0) >= 50 || l.status === "won";
+
+  const consultas = leads.filter((l) => !isInterested(l));
+  const interesados = leads.filter(isInterested);
+  const visibleLeads = tab === "consultas" ? consultas : interesados;
+
   const activeLead = leads.find((l) => l.id === activeLeadId) ?? null;
 
   return (
@@ -88,35 +138,65 @@ export function PropertyMessagesDrawer({
               <DrawerDescription>
                 {isLoading
                   ? "Cargando…"
-                  : total === 0
+                  : leads.length === 0
                     ? "Aún no hay mensajes ni consultas."
-                    : `${total} ${total === 1 ? "consulta" : "consultas"} en total · ${openCount} abierta${openCount === 1 ? "" : "s"}`}
+                    : `${consultas.length} ${consultas.length === 1 ? "consulta nueva" : "consultas nuevas"} · ${interesados.length} ${interesados.length === 1 ? "interesado" : "interesados"}`}
               </DrawerDescription>
             </>
           )}
         </DrawerHeader>
 
+        {/* Tabs Consultas / Interesados (solo en lista, no en conversación) */}
+        {!activeLead && leads.length > 0 && (
+          <div className="border-b border-border-subtle px-4">
+            <div className="flex gap-1">
+              <TabBtn
+                active={tab === "consultas"}
+                onClick={() => setTab("consultas")}
+                label="Consultas"
+                count={consultas.length}
+              />
+              <TabBtn
+                active={tab === "interesados"}
+                onClick={() => setTab("interesados")}
+                label="Interesados"
+                count={interesados.length}
+              />
+            </div>
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto">
           {activeLead ? (
             <ConversationView lead={activeLead} />
           ) : (
-            <div className="space-y-3 px-4 pb-2">
+            <div className="space-y-3 px-4 py-3">
               {isLoading ? (
                 Array.from({ length: 3 }).map((_, i) => (
                   <Card key={i} className="h-24 animate-pulse bg-surface-muted/40" />
                 ))
-              ) : leads.length === 0 ? (
+              ) : visibleLeads.length === 0 ? (
                 <Card className="p-10 text-center">
                   <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-muted text-foreground-muted">
                     <Icon icon={Mail01Icon} size={20} />
                   </div>
-                  <h3 className="mt-3 text-base font-semibold">Sin consultas</h3>
+                  <h3 className="mt-3 text-base font-semibold">
+                    {leads.length === 0
+                      ? "Sin consultas"
+                      : tab === "consultas"
+                        ? "Sin consultas pendientes"
+                        : "Sin interesados aún"}
+                  </h3>
                   <p className="mt-1 text-sm text-foreground-muted">
-                    Cuando alguien te contacte por esta propiedad desde el escaparate público o WhatsApp, aparecerá acá.
+                    {leads.length === 0
+                      ? "Cuando alguien te contacte por esta propiedad desde el escaparate público o WhatsApp, aparecerá acá."
+                      : tab === "consultas"
+                        ? "Todas las consultas recibidas ya fueron calificadas como interesados."
+                        : "Marca una consulta como interesado desde la conversación para verla acá."}
                   </p>
                 </Card>
               ) : (
-                leads.map((lead) => (
+                visibleLeads.map((lead) => (
                   <LeadRow
                     key={lead.id}
                     lead={lead}
@@ -220,24 +300,71 @@ function LeadRow({
 function ConversationView({ lead }: { lead: Lead }) {
   const { data, isLoading } = useLeadActivities(lead.id);
   const add = useAddLeadActivity(lead.id);
+  const saveLead = useSaveLead(lead.id);
   const [reply, setReply] = useState("");
 
-  // Mensaje inicial sintético desde lead.notes para que la conversación
-  // tenga contexto aunque el lead aún no tenga activities propias.
-  const seedMessage: LeadActivity | null = lead.notes
-    ? {
-        id: -1,
-        type: "message_in",
-        title: null,
-        body: lead.notes,
-        occurred_at: lead.created_at,
-        user: null,
-      }
-    : null;
+  const isInterested =
+    (lead.probability_pct ?? 0) >= 50 || lead.status === "won";
+
+  const toggleInterested = async () => {
+    const next = isInterested ? 20 : 70;
+    await toast.promise(
+      saveLead.mutateAsync({
+        probability_pct: next,
+      } as Parameters<typeof saveLead.mutateAsync>[0]),
+      {
+        loading: { title: isInterested ? "Quitando…" : "Marcando…" },
+        success: {
+          title: isInterested
+            ? "Movido a Consultas"
+            : "Marcado como Interesado",
+        },
+        error: (err: unknown) => ({
+          title: "Error",
+          description: err instanceof Error ? err.message : "",
+        }),
+      },
+    );
+  };
+
+  const activities = data?.data ?? [];
+
+  // Mensaje inicial sintético desde lead.notes — sólo si NINGUNA actividad ya
+  // tiene ese mismo body (PublicController::storeLead crea una activity tipo
+  // 'note' con body=mensaje, así que mostrar también el seed duplica).
+  const notesAlreadyInActivities =
+    lead.notes &&
+    activities.some((a) => (a.body ?? "").trim() === (lead.notes ?? "").trim());
+
+  const seedMessage: LeadActivity | null =
+    lead.notes && !notesAlreadyInActivities
+      ? {
+          id: -1,
+          type: "message_in",
+          title: null,
+          body: lead.notes,
+          occurred_at: lead.created_at,
+          user: null,
+          payload: null,
+        }
+      : null;
+
+  // Las activities con body == lead.notes que vinieron del escaparate las
+  // re-tipamos como mensajes entrantes del cliente (en vez de notes salientes
+  // del agente) para que se rendericen a la izquierda en gris.
+  const normalized = activities.map((a) => {
+    const isLeadCapture =
+      lead.notes &&
+      (a.body ?? "").trim() === (lead.notes ?? "").trim() &&
+      !a.user;
+    return isLeadCapture
+      ? { ...a, type: "message_in" as const, title: null }
+      : a;
+  });
 
   const messages: LeadActivity[] = [
     ...(seedMessage ? [seedMessage] : []),
-    ...(data?.data ?? []),
+    ...normalized,
   ];
 
   const sendReply = async () => {
@@ -263,6 +390,31 @@ function ConversationView({ lead }: { lead: Lead }) {
 
   return (
     <div className="flex h-full flex-col">
+      {/* Acción rápida: marcar/desmarcar como Interesado */}
+      <div className="border-b border-border-subtle bg-surface px-4 py-2">
+        <button
+          type="button"
+          onClick={toggleInterested}
+          disabled={saveLead.isPending}
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold transition-colors",
+            isInterested
+              ? "border-positive/40 bg-positive-soft/40 text-positive hover:bg-positive-soft/60"
+              : "border-border bg-surface-muted/40 text-foreground-muted hover:bg-surface-muted/70",
+            saveLead.isPending && "cursor-wait opacity-60",
+          )}
+        >
+          <Icon
+            icon={isInterested ? CheckmarkCircle02Icon : StarIcon}
+            size={11}
+          />
+          {isInterested ? "Marcado como Interesado" : "Marcar como Interesado"}
+        </button>
+      </div>
+
+      {/* Tarjeta compacta de contacto del lead */}
+      <ContactCard lead={lead} />
+
       {/* Mensajes */}
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
         {isLoading ? (
@@ -308,6 +460,54 @@ function ConversationView({ lead }: { lead: Lead }) {
           ⌘/Ctrl + Enter para enviar · Se guarda como actividad en el lead
         </p>
       </div>
+    </div>
+  );
+}
+
+function ContactCard({ lead }: { lead: Lead }) {
+  if (!lead.contact_email && !lead.contact_phone) return null;
+  const phoneDigits = (lead.contact_phone ?? "").replace(/[^0-9]/g, "");
+
+  return (
+    <div className="mx-4 mb-3 mt-3 rounded-2xl border border-border-subtle bg-surface-muted/40 p-3">
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        Contacto
+      </div>
+      <div className="mt-1.5 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+        {lead.contact_email && (
+          <a
+            href={`mailto:${lead.contact_email}`}
+            className="inline-flex items-center gap-2 rounded-xl bg-surface px-3 py-2 text-[12px] text-foreground transition-colors hover:bg-surface/70"
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-info-soft text-info">
+              <Icon icon={Mail01Icon} size={12} />
+            </span>
+            <span className="truncate">{lead.contact_email}</span>
+          </a>
+        )}
+        {lead.contact_phone && (
+          <a
+            href={`tel:${lead.contact_phone}`}
+            className="inline-flex items-center gap-2 rounded-xl bg-surface px-3 py-2 text-[12px] text-foreground transition-colors hover:bg-surface/70"
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-positive-soft text-positive">
+              <Icon icon={CallIcon} size={12} />
+            </span>
+            <span className="truncate tabular-numbers">{lead.contact_phone}</span>
+          </a>
+        )}
+      </div>
+      {lead.contact_phone && phoneDigits && (
+        <a
+          href={`https://wa.me/${phoneDigits}?text=${encodeURIComponent(`Hola ${lead.contact_name || ""}, te escribo desde Valencia Pro.`)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#25D366]/15 px-3 py-1 text-[11px] font-semibold text-[#1da851] transition-colors hover:bg-[#25D366]/25"
+        >
+          <Icon icon={WhatsappIcon} size={11} />
+          Abrir WhatsApp
+        </a>
+      )}
     </div>
   );
 }

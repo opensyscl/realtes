@@ -11,6 +11,8 @@ import { toast } from "@/lib/toast";
 import {
   useSaveProperty,
   usePropertyLease,
+  useDocuments,
+  usePhotos,
   type Property,
 } from "@/lib/queries";
 import { useAuthStore } from "@/store/auth";
@@ -363,12 +365,25 @@ export function PropertyWizard({ property }: { property?: Property }) {
   // están habilitados (no tiene sentido "Actualizar" si no hay nada nuevo).
   const isDirty = form.formState.isDirty;
 
+  // Conteos de media (compartidos por cache con DocumentDropZone / PhotoGallery,
+  // así que subir un archivo invalida estos counts y los steps se marcan al toque).
+  const { data: docsData } = useDocuments("properties", property?.id);
+  const { data: photosData } = usePhotos(property?.id);
+  const documentsCount = docsData?.length ?? 0;
+  const photosCount = photosData?.length ?? 0;
+  const floorsCount =
+    docsData?.filter((d) => d.category === "planos").length ?? 0;
+
   // Una vez guardado, todos los steps quedan habilitados.
   // Si es nuevo, los media-steps se muestran pero piden guardar primero.
   const steps = STEPS.map((s) => ({
     ...s,
     enabled: true,
-    completed: stepIsCompleted(s.id, property),
+    completed: stepIsCompleted(s.id, property, {
+      documentsCount,
+      photosCount,
+      floorsCount,
+    }),
   }));
 
   const formAny = form as unknown as UseFormReturn<Record<string, unknown>>;
@@ -457,9 +472,25 @@ export function PropertyWizard({ property }: { property?: Property }) {
   );
 }
 
-function stepIsCompleted(id: StepId, p?: Property): boolean {
+interface MediaCounts {
+  documentsCount: number;
+  photosCount: number;
+  floorsCount: number;
+}
+
+function stepIsCompleted(
+  id: StepId,
+  p?: Property,
+  media: MediaCounts = { documentsCount: 0, photosCount: 0, floorsCount: 0 },
+): boolean {
   if (!p) return false;
   switch (id) {
+    case "gallery":
+      return media.photosCount > 0 || !!p.cover_image_url;
+    case "documents":
+      return media.documentsCount > 0;
+    case "floors":
+      return media.floorsCount > 0;
     case "basic":
       return !!p.title;
     case "location":

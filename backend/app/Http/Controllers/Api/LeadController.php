@@ -28,6 +28,8 @@ class LeadController extends Controller
     public function index(Request $request): JsonResponse
     {
         $pipelineId = $request->integer('pipeline_id');
+        $view = $request->string('view')->toString(); // '', 'inbox'
+
         $q = Lead::query()
             ->with(['assignedTo:id,name,avatar_url', 'person:id,first_name,last_name', 'property:id,code,title'])
             ->withCount('activities')
@@ -40,19 +42,34 @@ class LeadController extends Controller
         if ($propertyId = $request->integer('property_id')) {
             $q->where('property_id', $propertyId);
         }
+        if ($source = $request->string('source')->toString()) {
+            $q->where('source', $source);
+        }
+        if ($search = $request->string('search')->toString()) {
+            $q->where(function ($w) use ($search) {
+                $w->where('contact_name', 'ilike', "%{$search}%")
+                    ->orWhere('contact_email', 'ilike', "%{$search}%")
+                    ->orWhere('contact_phone', 'ilike', "%{$search}%")
+                    ->orWhere('title', 'ilike', "%{$search}%")
+                    ->orWhere('notes', 'ilike', "%{$search}%");
+            });
+        }
         if ($status = $request->string('status')->toString()) {
             $q->where('status', $status);
-        } elseif (! $propertyId) {
+        } elseif (! $propertyId && $view !== 'inbox') {
             // por defecto sólo abiertos en el board
-            // (cuando filtramos por property mostramos todos)
+            // (en property view o inbox view mostramos todos los status)
             $q->whereIn('status', ['open']);
         }
 
-        // Cuando filtramos por property devolvemos lista plana en vez de
-        // agrupada por stage para usarla en la bandeja del detalle.
-        if ($propertyId) {
+        // Vista plana: filtro por propiedad o vista "inbox" (bandeja de entrada).
+        if ($propertyId || $view === 'inbox') {
             return response()->json([
-                'data' => LeadResource::collection($q->orderByDesc('created_at')->get()),
+                'data' => LeadResource::collection(
+                    $q->orderByDesc('last_activity_at')
+                        ->orderByDesc('created_at')
+                        ->get(),
+                ),
             ]);
         }
 

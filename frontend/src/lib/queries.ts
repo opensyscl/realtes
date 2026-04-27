@@ -238,6 +238,19 @@ export function useDeleteProperty() {
   });
 }
 
+export function useDuplicateProperty() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await api.post<{ data: Property }>(
+        `/api/properties/${id}/duplicate`,
+      );
+      return res.data.data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["properties"] }),
+  });
+}
+
 // ===========================================================
 // Persons
 // ===========================================================
@@ -365,6 +378,28 @@ export function useContracts(filters: ContractFilters = {}) {
         params: filters,
       });
       return res.data;
+    },
+  });
+}
+
+export function useBulkRentAdjust() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      adjustments: { contract_id: number; new_rent: number }[];
+      reason?: string;
+    }) => {
+      const res = await api.post<{
+        ok: true;
+        updated: number;
+        total: number;
+        errors: Array<{ contract_id: number; error: string }>;
+      }>("/api/contracts/bulk-rent-adjust", data);
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contracts"] });
+      qc.invalidateQueries({ queryKey: ["properties"] });
     },
   });
 }
@@ -664,6 +699,27 @@ export function useLeadsBoard(pipelineId?: number) {
       );
       return res.data.data;
     },
+  });
+}
+
+/**
+ * Bandeja de entrada — todos los leads en orden cronológico inverso por
+ * última actividad, sin agrupar por stage. Soporta búsqueda + filtros.
+ */
+export function useLeadsInbox(filters: {
+  search?: string;
+  source?: string;
+  status?: string;
+} = {}) {
+  return useQuery({
+    queryKey: ["leads", "inbox", filters],
+    queryFn: async () => {
+      const res = await api.get<{ data: Lead[] }>("/api/leads", {
+        params: { view: "inbox", ...filters },
+      });
+      return res.data.data;
+    },
+    refetchInterval: 30_000, // poll suave cada 30s para mensajes nuevos
   });
 }
 

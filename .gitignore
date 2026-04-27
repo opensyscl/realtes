@@ -4,6 +4,7 @@ vendor/
 .pnp
 .pnp.js
 .yarn/*
+.pnpm-store/
 
 # Build output
 .next/

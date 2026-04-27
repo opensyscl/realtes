@@ -17,6 +17,16 @@ import {
   Mail01Icon,
   GridViewIcon,
   GridTableIcon,
+  Download01Icon,
+  WhatsappIcon,
+  MoreVerticalIcon,
+  Edit02Icon,
+  Copy01Icon,
+  Delete02Icon,
+  CheckmarkCircle02Icon,
+  Link01Icon,
+  ContractsIcon,
+  LicenseNoIcon,
 } from "@hugeicons/core-free-icons";
 
 import { Card } from "@/components/ui/card";
@@ -24,7 +34,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icon";
-import { useProperties, usePropertyStats, type Property } from "@/lib/queries";
+import {
+  useProperties,
+  usePropertyStats,
+  useDuplicateProperty,
+  useDeleteProperty,
+  useSaveProperty,
+  type Property,
+} from "@/lib/queries";
+import { api } from "@/lib/api";
+import { toast } from "@/lib/toast";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverPopup,
+} from "@/components/ui/popover";
+import { useRouter } from "next/navigation";
 import {
   PropertyFilters,
   type AdvancedFilters,
@@ -225,6 +250,8 @@ export default function PropertiesPage() {
               <Icon icon={GridTableIcon} size={13} />
             </button>
           </div>
+
+          <ExportXlsxButton />
         </div>
       </Card>
 
@@ -334,6 +361,99 @@ function StatBox({
   );
 }
 
+function ExportXlsxButton() {
+  const [loading, setLoading] = useState(false);
+
+  const handleExport = async () => {
+    setLoading(true);
+    try {
+      const XLSX = await import("xlsx");
+      // Pedimos todas las propiedades sin paginar (per_page alto).
+      const res = await api.get<{ data: Property[] }>("/api/properties", {
+        params: { per_page: 1000 },
+      });
+      const all = res.data.data ?? [];
+
+      const rows = all.map((p) => ({
+        ID: p.id,
+        Código: p.code,
+        Título: p.title,
+        Tipo: p.type,
+        Operación: p.listing_type,
+        Estado: p.status,
+        Dirección: p.address,
+        Ciudad: p.city,
+        Provincia: p.province,
+        "Código postal": p.postal_code ?? "",
+        Habitaciones: p.bedrooms,
+        Baños: p.bathrooms,
+        "m²": p.area_sqm ?? "",
+        "m² construidos": p.built_sqm ?? "",
+        "m² terraza": p.terrace_sqm ?? "",
+        Estacionamientos: p.parking_spaces ?? "",
+        "Año construcción": p.year_built ?? "",
+        Orientación: p.orientation ?? "",
+        "Renta mensual": p.price_rent ?? "",
+        "Precio venta": p.price_sale ?? "",
+        "Gastos comunes": p.community_fee ?? "",
+        Contribuciones: p.ibi_annual ?? "",
+        Edificio: p.building?.name ?? "",
+        "Cliente asignado": p.client?.full_name ?? "",
+        "Dueño": p.owner?.full_name ?? "",
+        "Agente": p.agent?.name ?? "",
+        Comodidades: (p.features ?? []).join(", "),
+        "URL portada": p.cover_image_url ?? "",
+        "Tour virtual": p.tour_url ?? "",
+        "Video": p.video_url ?? "",
+        "Creada": p.created_at,
+        "Actualizada": p.updated_at,
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+
+      // Ancho de columnas auto (max 50)
+      const cols = Object.keys(rows[0] ?? {}).map((key) => {
+        const maxLen = Math.max(
+          key.length,
+          ...rows.map((r) => String(r[key as keyof typeof r] ?? "").length),
+        );
+        return { wch: Math.min(maxLen + 2, 50) };
+      });
+      ws["!cols"] = cols;
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Propiedades");
+      const filename = `propiedades-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      XLSX.writeFile(wb, filename);
+
+      toast.success({ title: `${all.length} propiedades exportadas` });
+    } catch (err) {
+      toast.error({
+        title: "Error al exportar",
+        description: err instanceof Error ? err.message : "Error desconocido",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleExport}
+      disabled={loading}
+      title="Exportar todas las propiedades a Excel (.xlsx)"
+      className={cn(
+        "ml-1 inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-xs font-medium text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground",
+        loading && "cursor-wait opacity-60",
+      )}
+    >
+      <Icon icon={Download01Icon} size={13} />
+      {loading ? "Exportando…" : "Excel"}
+    </button>
+  );
+}
+
 function SelectAllToggle({ visibleIds }: { visibleIds: number[] }) {
   const idsSet = usePropertySelection((s) => s.ids);
   const setMany = usePropertySelection((s) => s.setMany);
@@ -391,6 +511,276 @@ function SelectAllToggle({ visibleIds }: { visibleIds: number[] }) {
         <span className="h-0.5 w-3 rounded-full bg-current" />
       ) : null}
     </button>
+  );
+}
+
+function PropertyCardActions({ property: p }: { property: Property }) {
+  const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const dup = useDuplicateProperty();
+  const del = useDeleteProperty();
+  const save = useSaveProperty(p.id);
+
+  const baseUrl =
+    typeof window !== "undefined" ? window.location.origin : "";
+  const whatsappText = encodeURIComponent(
+    `Hola! Te comparto esta propiedad: *${p.title}*\n` +
+      `${p.address ?? ""}${p.city ? `, ${p.city}` : ""}\n` +
+      (p.price_rent
+        ? `Renta: $${Number(p.price_rent).toLocaleString("es-CL")}/mes\n`
+        : "") +
+      (p.price_sale
+        ? `Precio: $${Number(p.price_sale).toLocaleString("es-CL")}\n`
+        : "") +
+      `${baseUrl}/propiedades/${p.id}`,
+  );
+  const whatsappUrl = `https://wa.me/?text=${whatsappText}`;
+
+  const stopAll = (e: React.MouseEvent | React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDuplicate = async () => {
+    setOpen(false);
+    const ok = await toast.confirm({
+      title: "¿Duplicar propiedad?",
+      description: `Se creará una copia de "${p.title}" con un nuevo código.`,
+      confirmLabel: "Duplicar",
+    });
+    if (!ok) return;
+    try {
+      const created = await toast.promise(dup.mutateAsync(p.id), {
+        loading: { title: "Duplicando…" },
+        success: (np: Property) => ({
+          title: "Propiedad duplicada",
+          description: `Nuevo código: ${np.code}`,
+        }),
+        error: (e: unknown) => ({
+          title: "Error",
+          description: e instanceof Error ? e.message : "",
+        }),
+      });
+      router.push(`/propiedades/${created.id}`);
+    } catch {
+      // error toast ya se mostró
+    }
+  };
+
+  const handleMarkRented = async () => {
+    setOpen(false);
+    const ok = await toast.confirm({
+      title: "¿Marcar como arrendada?",
+      description: `La propiedad "${p.title}" cambiará a estado arrendada.`,
+      confirmLabel: "Confirmar",
+    });
+    if (!ok) return;
+    await toast.promise(save.mutateAsync({ status: "arrendada" }), {
+      loading: { title: "Actualizando…" },
+      success: { title: "Marcada como arrendada" },
+      error: (e: unknown) => ({
+        title: "Error",
+        description: e instanceof Error ? e.message : "",
+      }),
+    });
+  };
+
+  const handleDelete = async () => {
+    setOpen(false);
+    const ok = await toast.confirm({
+      title: `¿Eliminar "${p.title}"?`,
+      description: "Se podrá restaurar desde la papelera.",
+      confirmLabel: "Eliminar",
+      danger: true,
+    });
+    if (!ok) return;
+    await toast.promise(del.mutateAsync(p.id), {
+      loading: { title: "Eliminando…" },
+      success: { title: "Propiedad eliminada" },
+      error: (e: unknown) => ({
+        title: "Error",
+        description: e instanceof Error ? e.message : "",
+      }),
+    });
+  };
+
+  const handleCopyLink = async () => {
+    setOpen(false);
+    try {
+      await navigator.clipboard.writeText(`${baseUrl}/propiedades/${p.id}`);
+      toast.success("Link copiado");
+    } catch {
+      toast.error("No se pudo copiar");
+    }
+  };
+
+  return (
+    <div className="absolute right-3 top-3 z-20 flex items-center gap-1">
+      {/* WhatsApp */}
+      <a
+        href={whatsappUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        title="Compartir por WhatsApp"
+        className="flex h-7 w-7 items-center justify-center rounded-full bg-[#25D366] text-white shadow-sm transition-transform hover:scale-110"
+      >
+        <Icon icon={WhatsappIcon} size={13} />
+      </a>
+
+      {/* Acciones */}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          render={
+            <button
+              type="button"
+              onClick={stopAll}
+              title="Acciones"
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-foreground shadow-sm backdrop-blur transition-colors hover:bg-white"
+            >
+              <Icon icon={MoreVerticalIcon} size={14} />
+            </button>
+          }
+        />
+        <PopoverPopup align="end" side="bottom">
+          <div
+            className="flex w-56 flex-col p-1"
+            onClick={stopAll}
+            onPointerDown={stopAll}
+          >
+            <ActionItem
+              icon={Edit02Icon}
+              label="Editar"
+              onClick={() => {
+                setOpen(false);
+                router.push(`/propiedades/${p.id}/editar`);
+              }}
+            />
+            <ActionItem
+              icon={WhatsappIcon}
+              label="Compartir por WhatsApp"
+              onClick={() => {
+                setOpen(false);
+                window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+              }}
+              tone="positive"
+            />
+            <ActionItem
+              icon={Link01Icon}
+              label="Copiar link"
+              onClick={handleCopyLink}
+            />
+            <ActionItem
+              icon={Copy01Icon}
+              label="Duplicar"
+              onClick={handleDuplicate}
+            />
+            {p.status !== "arrendada" && (
+              <ActionItem
+                icon={CheckmarkCircle02Icon}
+                label="Marcar como arrendada"
+                onClick={handleMarkRented}
+                tone="info"
+              />
+            )}
+            <div className="my-1 h-px bg-border-subtle" />
+            <ActionItem
+              icon={Delete02Icon}
+              label="Eliminar"
+              onClick={handleDelete}
+              tone="negative"
+            />
+          </div>
+        </PopoverPopup>
+      </Popover>
+    </div>
+  );
+}
+
+function ActionItem({
+  icon,
+  label,
+  onClick,
+  tone = "neutral",
+}: {
+  icon: import("@hugeicons/react").IconSvgElement;
+  label: string;
+  onClick: () => void;
+  tone?: "neutral" | "positive" | "info" | "negative";
+}) {
+  const cls = {
+    neutral: "text-foreground hover:bg-surface-muted",
+    positive: "text-positive hover:bg-positive-soft/40",
+    info: "text-info hover:bg-info-soft/40",
+    negative: "text-negative hover:bg-negative-soft/40",
+  }[tone];
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className={cn(
+        "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[13px] font-medium transition-colors",
+        cls,
+      )}
+    >
+      <Icon icon={icon} size={13} />
+      {label}
+    </button>
+  );
+}
+
+function ContractRow({ property: p }: { property: Property }) {
+  const isRental = !!p.price_rent;
+  const c = p.active_contract;
+
+  if (!isRental) return null;
+
+  if (c) {
+    const end = c.end_date ? new Date(c.end_date) : null;
+    const daysLeft = end
+      ? Math.ceil((end.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      : null;
+    const isExpiring = daysLeft !== null && daysLeft <= 60 && daysLeft >= 0;
+    const isExpired = daysLeft !== null && daysLeft < 0;
+
+    return (
+      <div
+        className={cn(
+          "mt-2 flex items-center justify-between gap-2 rounded-xl px-2.5 py-1.5 text-[11px]",
+          isExpired
+            ? "bg-negative-soft text-negative"
+            : isExpiring
+              ? "bg-warning-soft text-warning"
+              : "bg-positive-soft text-positive",
+        )}
+        title={
+          end
+            ? `Vence el ${end.toLocaleDateString("es-CL")}`
+            : "Contrato vigente"
+        }
+      >
+        <span className="flex items-center gap-1.5 font-medium">
+          <Icon icon={ContractsIcon} size={12} />
+          {c.code}
+        </span>
+        <span className="tabular-numbers font-semibold">
+          {formatCurrency(c.monthly_rent)}/mes
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="mt-2 flex items-center gap-1.5 rounded-xl bg-surface-muted/60 px-2.5 py-1.5 text-[11px] text-foreground-muted"
+      title="Aún no hay contrato cargado para esta propiedad"
+    >
+      <Icon icon={LicenseNoIcon} size={12} />
+      <span>Sin contrato cargado</span>
+    </div>
   );
 }
 
@@ -463,8 +853,11 @@ function PropertyCard({ property: p }: { property: Property }) {
             {/* Gradiente inferior */}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
 
-            {/* Status badge top-right */}
-            <div className="absolute right-3 top-3 z-10">
+            {/* Acciones top-right (WhatsApp + dropdown) */}
+            <PropertyCardActions property={p} />
+
+            {/* Status badge: debajo del menú, top-right secundario */}
+            <div className="absolute right-3 top-12 z-10">
               <Badge
                 variant={status.tone}
                 className="border border-white/20 bg-white/95 shadow-sm backdrop-blur"
@@ -550,6 +943,8 @@ function PropertyCard({ property: p }: { property: Property }) {
                 {p.area_sqm ?? "—"}m²
               </span>
             </div>
+
+            <ContractRow property={p} />
           </div>
         </Card>
       </Link>

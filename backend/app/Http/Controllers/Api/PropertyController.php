@@ -178,6 +178,29 @@ class PropertyController extends Controller
     }
 
     /**
+     * POST /api/properties/{property}/duplicate
+     * Clona la propiedad con un nuevo código, status=disponible, sin contrato/cliente.
+     */
+    public function duplicate(Property $property): PropertyResource
+    {
+        $clone = $property->replicate([
+            'view_count', 'last_viewed_at',
+            'client_person_id', 'is_published',
+            'is_shared', 'shared_at',
+        ]);
+        $clone->code = 'P-'.strtoupper(\Illuminate\Support\Str::random(6));
+        $clone->title = $property->title.' (Copia)';
+        $clone->status = 'disponible';
+        $clone->is_published = false;
+        $clone->is_shared = false;
+        $clone->save();
+
+        return new PropertyResource(
+            $clone->fresh()->load(['building', 'activeContract', 'owner', 'agent', 'client']),
+        );
+    }
+
+    /**
      * POST /api/properties/bulk
      * Body: { action: 'change_status' | 'archive' | 'restore', ids: number[], payload?: {} }
      */

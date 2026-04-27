@@ -25,6 +25,7 @@ import type { IconSvgElement } from "@hugeicons/react";
 import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Icon } from "@/components/ui/icon";
+import { EconomicIndicators } from "@/components/dashboard/economic-indicators";
 import { useAuthStore } from "@/store/auth";
 import {
   useDashboardOverview,
@@ -50,6 +51,9 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-[1400px] px-8 py-8">
+      {/* Indicadores económicos chilenos (UF, UTM, USD, EUR) */}
+      <EconomicIndicators />
+
       {/* Greeting */}
       <div className="mb-7">
         <h1 className="text-3xl font-semibold tracking-tight">
