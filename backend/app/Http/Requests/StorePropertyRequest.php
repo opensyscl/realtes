@@ -101,6 +101,7 @@ class StorePropertyRequest extends FormRequest
             'ibi_annual' => ['nullable', 'numeric', 'min:0'],
 
             'description' => ['nullable', 'string'],
+            'cover_image_url' => ['nullable', 'url', 'max:500'],
             'tour_url' => ['nullable', 'url', 'max:500'],
             'video_url' => ['nullable', 'url', 'max:500'],
             'features' => ['nullable', 'array'],
