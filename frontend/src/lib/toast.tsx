@@ -121,8 +121,10 @@ export const toast = {
       toastId = sileo.show({
         title: opts.title,
         description,
-        type: "info",
-        duration: opts.duration ?? 0, // 0 = no auto-close
+        // duration:null = no auto-close (0 lo cierra al instante en sileo).
+        duration: opts.duration ?? null,
+        autopilot: false,
+        position: "top-center",
       });
     }),
 
