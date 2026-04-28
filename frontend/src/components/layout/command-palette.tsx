@@ -200,7 +200,9 @@ export function CommandPalette({ open, onClose }: Props) {
               abrir
             </span>
           </div>
-          <span>Real State Valencia</span>
+          <span>
+            Realtes<span className="text-[var(--gold)]">*</span>
+          </span>
         </div>
       </div>
     </div>

@@ -54,9 +54,9 @@ export default function ApiDocsPage() {
             API Reference
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-foreground-muted">
-            Todos los endpoints disponibles para integrar Real State Valencia
-            con otras aplicaciones, scripts o servicios. Las respuestas son
-            JSON; las peticiones autenticadas requieren un Bearer token.
+            Todos los endpoints disponibles para integrar Realtes con otras
+            aplicaciones, scripts o servicios. Las respuestas son JSON; las
+            peticiones autenticadas requieren un Bearer token.
           </p>
         </div>
         <a

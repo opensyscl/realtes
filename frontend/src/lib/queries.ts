@@ -42,6 +42,45 @@ export function useLogout() {
   });
 }
 
+interface ForgotPasswordPayload {
+  email: string;
+}
+
+export function useRequestPasswordReset() {
+  return useMutation({
+    mutationFn: async (data: ForgotPasswordPayload) => {
+      await api.post("/api/auth/forgot", data);
+      return { ok: true };
+    },
+  });
+}
+
+interface ResetPasswordPayload {
+  email: string;
+  token: string;
+  password: string;
+  password_confirmation: string;
+}
+
+export function useResetPassword() {
+  const setSession = useAuthStore((s) => s.setSession);
+
+  return useMutation({
+    mutationFn: async (data: ResetPasswordPayload) => {
+      const res = await api.post<{
+        token: string;
+        user: { data: AuthUser } | AuthUser;
+      }>("/api/auth/reset", data);
+      const user =
+        "data" in res.data.user
+          ? (res.data.user as { data: AuthUser }).data
+          : (res.data.user as AuthUser);
+      return { token: res.data.token, user };
+    },
+    onSuccess: ({ token, user }) => setSession({ token, user }),
+  });
+}
+
 // ===========================================================
 // Pagination shape
 // ===========================================================
@@ -2203,6 +2242,7 @@ export interface AgencySettings {
   currency: string;
   locale: string;
   logo_url: string | null;
+  onboarding_completed_at: string | null;
 }
 
 export interface AgencyMember {
@@ -2265,6 +2305,21 @@ export function useUpdateAgencySettings() {
           },
         });
       }
+    },
+  });
+}
+
+export function useCompleteOnboarding() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await api.post<{
+        data: { onboarding_completed_at: string | null };
+      }>("/api/agency/onboarding/complete");
+      return res.data.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["agency"] });
     },
   });
 }

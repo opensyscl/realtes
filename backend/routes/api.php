@@ -31,9 +31,13 @@ use Illuminate\Support\Facades\Route;
 
 // ---------- Públicas ----------
 Route::post('/auth/login', [AuthController::class, 'login'])
-    ->middleware('throttle:6,1');
+    ->middleware('throttle:20,1');
 Route::post('/auth/register', [AuthController::class, 'register'])
     ->middleware('throttle:3,10');
+Route::post('/auth/forgot', [AuthController::class, 'forgotPassword'])
+    ->middleware('throttle:5,15');
+Route::post('/auth/reset', [AuthController::class, 'resetPassword'])
+    ->middleware('throttle:5,15');
 
 // Escaparate público de cada agencia (sin auth)
 Route::prefix('public/{slug}')->group(function () {
@@ -90,6 +94,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Agency settings
     Route::get('/agency', [AgencySettingsController::class, 'showAgency']);
     Route::patch('/agency', [AgencySettingsController::class, 'updateAgency']);
+    Route::post('/agency/onboarding/complete', [AgencySettingsController::class, 'completeOnboarding']);
     Route::get('/agency/members', [AgencySettingsController::class, 'members']);
     Route::get('/agency/template', [AgencySettingsController::class, 'showTemplate']);
     Route::patch('/agency/template', [AgencySettingsController::class, 'updateTemplate']);

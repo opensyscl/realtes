@@ -10,8 +10,10 @@ use App\Models\Stage;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -70,12 +72,12 @@ class AuthController extends Controller
                 'phone' => $data['agency_phone'] ?? null,
                 'city' => 'Valencia',
                 'country' => 'ES',
-                'plan' => 'pro',
-                'current_plan_code' => 'pro',
-                'subscription_status' => 'trialing',
+                'plan' => 'starter',
+                'current_plan_code' => 'starter',
+                'subscription_status' => 'active',
                 'subscription_started_at' => now(),
-                'trial_ends_at' => now()->addDays(14),
-                'current_period_end' => now()->addDays(14),
+                'trial_ends_at' => null,
+                'current_period_end' => null,
                 'billing_cycle' => 'monthly',
                 'active' => true,
             ]);
@@ -145,6 +147,100 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Solicita un email con enlace para resetear la contraseña.
+     * Por seguridad responde 200 incluso si el email no existe (no revelar registros).
+     * Token válido por 60 minutos.
+     */
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:160'],
+        ]);
+
+        $user = User::where('email', $data['email'])
+            ->where('active', true)
+            ->first();
+
+        if (! $user) {
+            // No revelamos si el email está registrado o no.
+            return response()->json(['ok' => true]);
+        }
+
+        $rawToken = Str::random(64);
+
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $data['email']],
+            ['token' => Hash::make($rawToken), 'created_at' => now()],
+        );
+
+        $frontendUrl = rtrim(config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3001')), '/');
+        $url = $frontendUrl
+            . '/reset?token=' . $rawToken
+            . '&email=' . urlencode($data['email']);
+
+        Mail::to($user->email)->send(
+            new \App\Mail\PasswordResetMail($user, $url),
+        );
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Cambia la contraseña usando el token enviado por email.
+     * En éxito devuelve token Sanctum nuevo (auto-login).
+     */
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:160'],
+            'token' => ['required', 'string', 'min:32', 'max:200'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $row = DB::table('password_reset_tokens')
+            ->where('email', $data['email'])
+            ->first();
+
+        if (! $row || ! Hash::check($data['token'], $row->token)) {
+            throw ValidationException::withMessages([
+                'token' => ['Enlace inválido o ya usado. Solicita uno nuevo.'],
+            ]);
+        }
+
+        // Token expira en 60 minutos
+        if (Carbon::parse($row->created_at)->addMinutes(60)->isPast()) {
+            DB::table('password_reset_tokens')->where('email', $data['email'])->delete();
+            throw ValidationException::withMessages([
+                'token' => ['El enlace expiró. Solicita uno nuevo.'],
+            ]);
+        }
+
+        $user = User::where('email', $data['email'])->where('active', true)->first();
+
+        if (! $user) {
+            throw ValidationException::withMessages([
+                'email' => ['Usuario no encontrado.'],
+            ]);
+        }
+
+        DB::transaction(function () use ($user, $data) {
+            $user->update(['password' => Hash::make($data['password'])]);
+            // Invalida tokens previos (cierra sesiones)
+            $user->tokens()->delete();
+            // Limpia el token de reset
+            DB::table('password_reset_tokens')->where('email', $data['email'])->delete();
+        });
+
+        $user->load('agency');
+        $token = $user->createToken('reset-web')->plainTextToken;
+
+        return response()->json([
+            'token' => $token,
+            'user' => new UserResource($user),
+        ]);
     }
 
     public function updateProfile(Request $request): UserResource

@@ -3,277 +3,219 @@
 import Link from "next/link";
 import {
   ArrowRight01Icon,
-  CheckmarkCircle02Icon,
-  ChartLineData01Icon,
-  UserMultiple02Icon,
-  Building03Icon,
+  StarIcon,
 } from "@hugeicons/core-free-icons";
 
 import { Icon } from "@/components/ui/icon";
-import { RealtesLogo } from "./realtes-logo";
 
 export function LandingHero() {
   return (
-    <section className="relative overflow-hidden bg-[#0a0a0c] pb-20 pt-28 text-white">
-      {/* fondo: leve grain + glow gold */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-40"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 20% 30%, rgba(201,169,110,0.10), transparent 50%), radial-gradient(circle at 80% 70%, rgba(201,169,110,0.06), transparent 60%)",
-        }}
-      />
+    <section className="relative overflow-hidden pt-32 pb-24 text-[#1a1612]">
+      <BackgroundLight />
 
-      <div className="relative mx-auto grid max-w-[1280px] grid-cols-1 items-center gap-10 px-6 lg:grid-cols-[1.1fr_1fr]">
-        {/* Columna izquierda: copy + CTAs */}
-        <div className="max-w-2xl">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--gold)]/30 bg-[var(--gold)]/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--gold)]">
-            Software inmobiliario todo en uno
-          </span>
-
-          <h1 className="mt-7 font-serif text-[64px] font-semibold leading-[1.05] tracking-tight sm:text-[72px] lg:text-[80px]">
-            Gestiona. Vende.
-            <br />
-            <span className="text-[var(--gold)]">
-              Haz crecer tu negocio.
-            </span>
-          </h1>
-
-          <p className="mt-6 max-w-xl text-base text-white/70 sm:text-lg">
-            Realtes es el software inmobiliario que te ayuda a gestionar
-            propiedades, clientes y ventas desde un solo lugar.
-          </p>
-
-          <div className="mt-8 flex flex-wrap items-center gap-4">
-            <Link
-              href="/registro"
-              className="group inline-flex items-center gap-2 rounded-full bg-[var(--gold)] px-6 py-3 text-sm font-semibold text-black shadow-[0_8px_30px_-8px_rgba(201,169,110,0.5)] transition-all hover:bg-[var(--gold)]/90 hover:shadow-[0_12px_40px_-8px_rgba(201,169,110,0.6)]"
-            >
-              Comenzar gratis
-              <Icon
-                icon={ArrowRight01Icon}
-                size={14}
-                className="transition-transform group-hover:translate-x-0.5"
-              />
-            </Link>
-            <a
-              href="#demo"
-              className="group inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:text-white"
-            >
-              Agendar demo
-              <Icon
-                icon={ArrowRight01Icon}
-                size={13}
-                className="transition-transform group-hover:translate-x-0.5"
-              />
-            </a>
-          </div>
-
-          {/* Trust badges */}
-          <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-white/70">
-            {[
-              "Sin tarjeta de crédito",
-              "Fácil de usar",
-              "Soporte en español",
-            ].map((t) => (
-              <li key={t} className="flex items-center gap-1.5">
-                <Icon
-                  icon={CheckmarkCircle02Icon}
-                  size={14}
-                  className="text-[var(--gold)]"
-                />
-                {t}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Columna derecha: mockup del dashboard sobre fondo de propiedad */}
-        <div className="relative">
-          <PropertyBackdrop />
-          <DashboardMockup />
-        </div>
+      <div className="relative mx-auto grid max-w-[1280px] grid-cols-1 items-center gap-x-14 gap-y-16 px-6 lg:grid-cols-[1.05fr_0.95fr]">
+        <HeroCopy />
+        <HeroVisual />
       </div>
     </section>
   );
 }
 
-/**
- * Fondo de la columna derecha — placeholder gradient simulando una propiedad.
- * Cuando tengas una imagen real, sustituye por <img src="/landing/hero.jpg" />
- */
-function PropertyBackdrop() {
+function BackgroundLight() {
   return (
-    <div
-      aria-hidden
-      className="absolute inset-0 -z-10 overflow-hidden rounded-3xl"
-      style={{
-        backgroundImage:
-          "linear-gradient(135deg, #1a1714 0%, #2d2820 30%, #1a1714 60%, #0f0d0a 100%)",
-      }}
-    >
-      {/* Sugerencia de ventana iluminada */}
-      <div className="absolute right-[20%] top-[10%] h-[60%] w-[35%] rounded-2xl bg-gradient-to-br from-[#c9a96e]/20 via-[#c9a96e]/5 to-transparent blur-2xl" />
-      <div className="absolute bottom-[15%] left-[10%] h-[40%] w-[40%] rounded-2xl bg-gradient-to-tl from-[#c9a96e]/10 to-transparent blur-3xl" />
+    <>
+      <div
+        aria-hidden
+        className="absolute inset-0 -z-10"
+        style={{
+          background:
+            "linear-gradient(180deg, #f6f1e8 0%, #fbf7ef 35%, #f3ecdf 100%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          backgroundImage:
+            "radial-gradient(45% 45% at 18% 22%, rgba(201,169,110,0.22), transparent 70%), radial-gradient(40% 50% at 85% 80%, rgba(201,169,110,0.16), transparent 70%), radial-gradient(35% 35% at 65% 15%, rgba(255,255,255,0.7), transparent 70%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 opacity-[0.05] mix-blend-multiply"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
+        }}
+      />
+    </>
+  );
+}
+
+function HeroCopy() {
+  return (
+    <div className="max-w-2xl">
+      <span className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/55 px-3.5 py-1.5 text-[11px] font-medium text-[#1a1612]/80 shadow-[0_4px_16px_-6px_rgba(80,60,30,0.18)] backdrop-blur-xl">
+        <span className="relative flex h-1.5 w-1.5">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--gold)] opacity-50" />
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--gold)]" />
+        </span>
+        #1 ERP + CRM inmobiliario en Chile
+      </span>
+
+      <h1 className="mt-7 font-serif text-[56px] font-medium leading-[1.0] tracking-[-0.02em] sm:text-[68px] lg:text-[80px]">
+        Tu agencia,
+        <br />
+        operada con
+        <br />
+        <span className="italic text-[#1a1612]/95">elegancia</span>{" "}
+        <span className="text-[var(--gold)]">·</span>
+      </h1>
+
+      <p className="mt-7 max-w-lg text-[17px] leading-[1.55] text-[#1a1612]/65">
+        Realtes centraliza propiedades, captación, contratos, comisiones y la
+        comunicación con tus clientes. Tu equipo cierra más operaciones, sin
+        fricción.
+      </p>
+
+      <div className="mt-9 flex flex-wrap items-center gap-3">
+        <Link
+          href="/registro"
+          className="group inline-flex items-center gap-2 rounded-full bg-[#1a1612] py-3.5 pl-6 pr-2 text-[14px] font-medium text-white shadow-[0_12px_30px_-10px_rgba(26,22,18,0.45)] transition-all hover:bg-black"
+        >
+          Empezar gratis
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#1a1612] transition-transform group-hover:translate-x-0.5">
+            <Icon icon={ArrowRight01Icon} size={13} />
+          </span>
+        </Link>
+        <a
+          href="#funcionalidades"
+          className="inline-flex items-center gap-1.5 rounded-full border border-white/70 bg-white/45 px-6 py-3.5 text-[14px] font-medium text-[#1a1612]/85 shadow-[0_4px_16px_-6px_rgba(80,60,30,0.12)] backdrop-blur-xl transition-colors hover:bg-white/70 hover:text-[#1a1612]"
+        >
+          Ver funcionalidades
+        </a>
+      </div>
+
+      <HeroSocialProof />
     </div>
   );
 }
 
-/**
- * Mockup del dashboard interno — versión simplificada que se ve flotando
- * sobre la imagen de fondo. No es una captura real, es CSS + datos demo.
- */
-function DashboardMockup() {
+function HeroSocialProof() {
   return (
-    <div className="relative ml-auto max-w-[540px] rounded-2xl border border-white/10 bg-white/[0.02] p-2 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)] backdrop-blur-sm">
-      <div className="flex overflow-hidden rounded-xl bg-white">
-        {/* Sidebar */}
-        <aside className="flex w-[140px] shrink-0 flex-col gap-1 bg-[#0e1014] p-3 text-white">
-          <div className="mb-3 px-1.5">
-            <RealtesLogo variant="white" className="h-4" />
-          </div>
-          {[
-            ["Dashboard", true],
-            ["Propiedades", false],
-            ["Clientes", false],
-            ["Oportunidades", false],
-            ["Tareas", false],
-            ["Reportes", false],
-            ["Configuración", false],
-          ].map(([label, active]) => (
-            <span
-              key={String(label)}
-              className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[10px] ${
-                active
-                  ? "bg-white/10 font-semibold text-white"
-                  : "text-white/55"
-              }`}
-            >
-              <span className="h-1 w-1 rounded-full bg-current" />
-              {label}
-            </span>
+    <div className="mt-12 flex items-center gap-6 border-t border-[#1a1612]/[0.08] pt-7">
+      <div className="flex -space-x-2">
+        {[1, 2, 3, 4].map((i) => (
+          <span
+            key={i}
+            className="h-9 w-9 overflow-hidden rounded-full border-2 border-[#fbf7ef] bg-white shadow-[0_2px_6px_rgba(0,0,0,0.08)]"
+          >
+            <img
+              src={`https://i.pravatar.cc/72?img=${i + 12}`}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          </span>
+        ))}
+      </div>
+      <div>
+        <div className="flex items-center gap-1 text-[var(--gold)]">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Icon key={i} icon={StarIcon} size={12} />
           ))}
-        </aside>
-
-        {/* Contenido */}
-        <div className="flex-1 p-3">
-          <div className="text-[11px] font-semibold text-foreground">
-            Dashboard
-          </div>
-
-          {/* Stats row */}
-          <div className="mt-2 grid grid-cols-3 gap-1.5">
-            <MockStat
-              label="Ventas este mes"
-              value="$128.540"
-              delta="+34%"
-            />
-            <MockStat label="Nuevos clientes" value="48" delta="+13%" />
-            <MockStat
-              label="Propiedades activas"
-              value="86"
-              delta=""
-            />
-          </div>
-
-          {/* Chart + activity */}
-          <div className="mt-2 grid grid-cols-[1.3fr_1fr] gap-1.5">
-            <div className="rounded-md border border-border-subtle bg-surface p-2">
-              <div className="text-[8px] font-semibold text-foreground-muted">
-                Ventas
-              </div>
-              <Sparkline />
-              <div className="mt-1 flex justify-between text-[7px] text-muted-foreground">
-                {["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul"].map((m) => (
-                  <span key={m}>{m}</span>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-md border border-border-subtle bg-surface p-2">
-              <div className="text-[8px] font-semibold text-foreground-muted">
-                Actividad reciente
-              </div>
-              <ul className="mt-1.5 space-y-1.5">
-                {[
-                  { icon: UserMultiple02Icon, t: "Nuevo cliente", s: "Hace 2h" },
-                  {
-                    icon: Building03Icon,
-                    t: "Propiedad publicada",
-                    s: "Hace 5h",
-                  },
-                  { icon: ChartLineData01Icon, t: "Oferta recibida", s: "Hace 1d" },
-                ].map((a, i) => (
-                  <li key={i} className="flex items-start gap-1.5">
-                    <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-surface-muted text-foreground-muted">
-                      <Icon icon={a.icon} size={7} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[8px] font-semibold text-foreground">
-                        {a.t}
-                      </div>
-                      <div className="text-[7px] text-muted-foreground">
-                        {a.s}
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          <span className="ml-1 text-[13px] font-medium text-[#1a1612]">
+            5.0
+          </span>
+        </div>
+        <div className="mt-0.5 text-[12px] text-[#1a1612]/55">
+          De 200+ corredoras de propiedades en Chile
         </div>
       </div>
     </div>
   );
 }
 
-function MockStat({
-  label,
-  value,
-  delta,
-}: {
-  label: string;
-  value: string;
-  delta: string;
-}) {
+function HeroVisual() {
   return (
-    <div className="rounded-md border border-border-subtle bg-surface p-1.5">
-      <div className="text-[7px] font-medium text-muted-foreground">
-        {label}
+    <div className="relative mx-auto w-full max-w-[540px]">
+      {/* Imagen en arco */}
+      <div className="relative aspect-[3/4] overflow-hidden rounded-t-[260px] rounded-b-[14px] bg-[#1a1714] shadow-[0_40px_100px_-30px_rgba(80,60,30,0.35)] ring-1 ring-white/40">
+        <img
+          src="https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=900&q=85&auto=format&fit=crop"
+          alt="Villa moderna mediterránea"
+          className="h-full w-full object-cover"
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "linear-gradient(180deg, rgba(0,0,0,0) 65%, rgba(0,0,0,0.18) 100%)",
+          }}
+        />
       </div>
-      <div className="mt-0.5 text-[11px] font-bold tabular-numbers tracking-tight text-foreground">
-        {value}
+
+      {/* Badge: arriba */}
+      <div className="absolute left-1/2 top-6 -translate-x-1/2">
+        <FloatingChip>Captación inteligente</FloatingChip>
       </div>
-      {delta && (
-        <div className="text-[7px] font-semibold text-positive">↑ {delta}</div>
-      )}
+
+      {/* Badge: medio derecha */}
+      <div className="absolute right-[-18px] top-[42%] hidden sm:block">
+        <FloatingChip>Cierres sin fricción</FloatingChip>
+      </div>
+
+      {/* Badge: abajo izquierda */}
+      <div className="absolute bottom-[26%] left-[-18px] hidden sm:block">
+        <FloatingChip>Clientes felices</FloatingChip>
+      </div>
+
+      {/* Mini KPI bottom right */}
+      <div className="absolute -bottom-4 right-2">
+        <KpiCard />
+      </div>
+
+      {/* Mini pulse top left */}
+      <div className="absolute -left-3 top-[12%] hidden lg:block">
+        <PulseCard />
+      </div>
     </div>
   );
 }
 
-function Sparkline() {
-  // Path simplificado — emula la curva del mockup
+function FloatingChip({ children }: { children: React.ReactNode }) {
   return (
-    <svg viewBox="0 0 220 50" className="mt-1 h-12 w-full">
-      <defs>
-        <linearGradient id="sl-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#c9a96e" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="#c9a96e" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polyline
-        points="0,40 35,35 70,28 105,30 140,18 175,12 220,8 220,50 0,50"
-        fill="url(#sl-grad)"
-      />
-      <polyline
-        points="0,40 35,35 70,28 105,30 140,18 175,12 220,8"
-        fill="none"
-        stroke="#c9a96e"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <div className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/65 px-4 py-2 text-[12.5px] font-medium text-[#1a1612] shadow-[0_10px_28px_-10px_rgba(50,40,25,0.2)] backdrop-blur-xl">
+      <span className="h-1.5 w-1.5 rounded-full bg-[var(--gold)]" />
+      {children}
+    </div>
+  );
+}
+
+function KpiCard() {
+  return (
+    <div className="flex w-[170px] flex-col gap-1.5 rounded-2xl border border-white/70 bg-white/70 p-3 text-[#1a1612] shadow-[0_18px_42px_-14px_rgba(50,40,25,0.25)] backdrop-blur-xl">
+      <div className="flex items-center justify-between text-[10.5px] uppercase tracking-[0.12em] text-[#1a1612]/45">
+        <span>Cerrado este mes</span>
+      </div>
+      <div className="font-serif text-[26px] font-semibold leading-none tracking-tight tabular-numbers">
+        UF 3.250
+      </div>
+      <div className="flex items-center gap-1.5 text-[11px] text-emerald-600">
+        <span className="h-1 w-1 rounded-full bg-emerald-500" />
+        +34% vs mes pasado
+      </div>
+    </div>
+  );
+}
+
+function PulseCard() {
+  return (
+    <div className="flex items-center gap-2 rounded-full border border-white/70 bg-white/65 py-1.5 pl-1.5 pr-3 text-[11px] text-[#1a1612] shadow-[0_10px_28px_-10px_rgba(50,40,25,0.18)] backdrop-blur-xl">
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--gold)]/20 text-[10px] font-semibold text-[#7a5b1f]">
+        ↗
+      </span>
+      <span className="font-medium">3 nuevos leads</span>
+    </div>
   );
 }

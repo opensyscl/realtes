@@ -57,6 +57,28 @@ class AgencySettingsController extends Controller
                 'currency' => $agency->currency ?? 'CLP',
                 'locale' => $agency->locale ?? 'es-CL',
                 'logo_url' => $agency->logo_url,
+                'onboarding_completed_at' => $agency->onboarding_completed_at,
+            ],
+        ]);
+    }
+
+    public function completeOnboarding(Request $request): JsonResponse
+    {
+        $agency = Agency::findOrFail($request->user()->agency_id);
+
+        if ($request->user()->role !== 'owner') {
+            return response()->json([
+                'message' => 'Solo el owner puede completar el onboarding.',
+            ], 403);
+        }
+
+        if (! $agency->onboarding_completed_at) {
+            $agency->update(['onboarding_completed_at' => now()]);
+        }
+
+        return response()->json([
+            'data' => [
+                'onboarding_completed_at' => $agency->onboarding_completed_at,
             ],
         ]);
     }

@@ -17,6 +17,7 @@ class Agency extends Model
         'current_plan_code', 'subscription_status',
         'subscription_started_at', 'current_period_end',
         'cancelled_at', 'billing_cycle',
+        'onboarding_completed_at',
         'public_template_preset', 'public_template_config',
         'public_primary_color', 'public_font',
         'currency', 'locale',
@@ -30,6 +31,7 @@ class Agency extends Model
         'subscription_started_at' => 'datetime',
         'current_period_end' => 'datetime',
         'cancelled_at' => 'datetime',
+        'onboarding_completed_at' => 'datetime',
         'public_template_config' => 'array',
         'watermark_settings' => 'array',
     ];

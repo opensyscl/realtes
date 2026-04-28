@@ -14,7 +14,7 @@
   <div class="wrap">
     {!! nl2br(e($body)) !!}
     <div class="footer">
-      Este email fue enviado desde Real State Valencia.
+      Este email fue enviado desde Realtes.
     </div>
   </div>
 </body>

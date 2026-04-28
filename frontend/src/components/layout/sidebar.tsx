@@ -28,6 +28,7 @@ import {
 import type { IconSvgElement } from "@hugeicons/react";
 
 import { cn } from "@/lib/utils";
+import { RealtesLogo } from "@/components/landing/realtes-logo";
 import { Avatar } from "@/components/ui/avatar";
 import { Icon } from "@/components/ui/icon";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -105,16 +106,18 @@ export function Sidebar() {
       <div className="relative flex h-14 items-center px-3">
         <Link
           href="/dashboard"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sidebar-foreground text-sidebar text-sm font-bold"
-          title="Real State Valencia"
+          className="flex items-center gap-1.5"
+          title="Realtes"
         >
-          R
+          {expanded ? (
+            <>
+              <RealtesLogo variant="white" className="h-6" />
+              <span className="text-[var(--gold)]">*</span>
+            </>
+          ) : (
+            <RealtesLogo variant="iso-white" className="h-7 w-7" />
+          )}
         </Link>
-        {expanded && (
-          <span className="ml-3 truncate text-sm font-semibold tracking-tight">
-            Real State Valencia
-          </span>
-        )}
 
         {/* Toggle button — discreto, mismo color de la sidebar, sin border blanco */}
         <button
