@@ -328,8 +328,8 @@ function StepProperty({
         listing_type: listing,
         bedrooms: bedrooms ? Number(bedrooms) : undefined,
         area_sqm: area ? Number(area) : undefined,
-        sale_price: listing === "venta" && price ? Number(price) : undefined,
-        rent_price: listing === "alquiler" && price ? Number(price) : undefined,
+        price_sale: listing === "venta" && price ? Number(price) : undefined,
+        price_rent: listing === "alquiler" && price ? Number(price) : undefined,
         status: "disponible",
       });
       onNext();
