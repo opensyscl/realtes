@@ -4,14 +4,43 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\MlPublication;
+use App\Models\MlToken;
 use App\Models\Property;
+use App\Services\MercadoLibre\MlListingTypePicker;
 use App\Services\MercadoLibre\MlPropertyPublisher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class MlPropertyController extends Controller
 {
-    public function __construct(private readonly MlPropertyPublisher $publisher) {}
+    public function __construct(
+        private readonly MlPropertyPublisher $publisher,
+        private readonly MlListingTypePicker $picker,
+    ) {}
+
+    /**
+     * GET /api/integrations/mercadolibre/properties/{property}/listing-types
+     * Devuelve los tiers disponibles + sus fees + el que el sistema usaría por default.
+     * Sirve para que el frontend muestre el modal de confirmación antes de publicar.
+     */
+    public function listingTypes(Property $property): JsonResponse
+    {
+        $token = MlToken::where('agency_id', $property->agency_id)->first();
+        if (! $token) {
+            return response()->json(['message' => 'Mercado Libre no está conectado.'], 422);
+        }
+        try {
+            $data = $this->picker->pickFor($token, $property);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+        return response()->json([
+            'data' => array_merge($data, [
+                'agency_default' => $token->default_listing_type ?: 'auto',
+                'confirm_before_charge' => (bool) $token->confirm_before_charge,
+            ]),
+        ]);
+    }
 
     /** GET /api/integrations/mercadolibre/properties/{property} — estado de la publicación */
     public function show(Property $property): JsonResponse
@@ -22,11 +51,19 @@ class MlPropertyController extends Controller
         ]);
     }
 
-    /** POST /api/integrations/mercadolibre/properties/{property}/publish */
-    public function publish(Property $property): JsonResponse
+    /**
+     * POST /api/integrations/mercadolibre/properties/{property}/publish
+     *
+     * Body opcional: { "listing_type_id": "silver" } para forzar el tier.
+     * Si no se pasa, el picker decide en base al setting de la agencia.
+     */
+    public function publish(Request $request, Property $property): JsonResponse
     {
+        $data = $request->validate([
+            'listing_type_id' => ['nullable', 'string', 'in:free,silver,gold,gold_special,gold_premium'],
+        ]);
         try {
-            $pub = $this->publisher->publish($property);
+            $pub = $this->publisher->publish($property, $data['listing_type_id'] ?? null);
         } catch (\Throwable $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

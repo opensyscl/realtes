@@ -13,13 +13,23 @@ class MlPropertyPublisher
 {
     public function __construct(
         private readonly MlPropertyMapper $mapper,
+        private readonly MlListingTypePicker $picker,
     ) {}
 
-    public function publish(Property $property): MlPublication
+    /**
+     * Publica una propiedad. Si $listingTypeOverride se pasa explícito (por ej.
+     * del modal de confirmación del frontend), se usa ese tier. Si no, el
+     * picker decide en base al setting de la agencia + tiers disponibles.
+     */
+    public function publish(Property $property, ?string $listingTypeOverride = null): MlPublication
     {
         $token = $this->tokenFor($property->agency_id);
         $client = MlClient::for($token);
-        $mapped = $this->mapper->map($property);
+
+        $listingTypeId = $listingTypeOverride
+            ?: $this->picker->pickFor($token, $property)['chosen_listing_type_id'];
+
+        $mapped = $this->mapper->map($property, $listingTypeId);
 
         try {
             $resp = $client->post('/items', $mapped['payload']);

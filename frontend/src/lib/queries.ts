@@ -2841,6 +2841,56 @@ export interface MlIntegrationStatus {
   expires_at?: string | null;
   last_refresh_at?: string | null;
   last_error?: string | null;
+  default_listing_type?: string;
+  confirm_before_charge?: boolean;
+}
+
+export interface MlListingTypeOption {
+  id: string;
+  name: string;
+  fee: number;
+  remaining: number | null;
+  exposure: string | null;
+}
+
+export interface MlListingTypePreview {
+  chosen_listing_type_id: string;
+  chosen_fee: number;
+  chosen_remaining: number | null;
+  options: MlListingTypeOption[];
+  agency_default: string;
+  confirm_before_charge: boolean;
+}
+
+export function useMlListingTypes(propertyId: number, enabled = true) {
+  return useQuery({
+    queryKey: ["ml", "listing-types", propertyId],
+    enabled,
+    queryFn: async () => {
+      const res = await api.get<{ data: MlListingTypePreview }>(
+        `/api/integrations/mercadolibre/properties/${propertyId}/listing-types`,
+      );
+      return res.data.data;
+    },
+    staleTime: 60_000,
+  });
+}
+
+export function useUpdateMlSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      default_listing_type?: string;
+      confirm_before_charge?: boolean;
+    }) => {
+      const res = await api.patch<{
+        data: { default_listing_type: string; confirm_before_charge: boolean };
+      }>("/api/integrations/mercadolibre/settings", data);
+      return res.data.data;
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["integrations", "mercadolibre"] }),
+  });
 }
 
 export function useMlIntegration() {
@@ -2914,14 +2964,17 @@ export function useMlPublication(propertyId: number) {
 export function usePublishToMl(propertyId: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (params?: { listing_type_id?: string }) => {
       const res = await api.post<{ data: MlPublication }>(
         `/api/integrations/mercadolibre/properties/${propertyId}/publish`,
+        params ?? {},
       );
       return res.data.data;
     },
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ["ml", "publication", propertyId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ml", "publication", propertyId] });
+      qc.invalidateQueries({ queryKey: ["properties"] });
+    },
   });
 }
 

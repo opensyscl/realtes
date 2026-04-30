@@ -270,7 +270,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/connect', [MlAuthController::class, 'connect']);
         Route::get('/me', [MlAuthController::class, 'me']);
         Route::delete('/disconnect', [MlAuthController::class, 'disconnect']);
+        Route::patch('/settings', [MlAuthController::class, 'updateSettings']);
 
+        Route::get('/properties/{property}/listing-types', [MlPropertyController::class, 'listingTypes']);
         Route::get('/properties/{property}', [MlPropertyController::class, 'show']);
         Route::post('/properties/{property}/publish', [MlPropertyController::class, 'publish']);
         Route::put('/properties/{property}', [MlPropertyController::class, 'update']);

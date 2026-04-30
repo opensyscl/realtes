@@ -78,6 +78,8 @@ class MlAuthController extends Controller
             'expires_at' => $token->expires_at,
             'last_refresh_at' => $token->last_refresh_at,
             'last_error' => $token->last_error,
+            'default_listing_type' => $token->default_listing_type ?: 'auto',
+            'confirm_before_charge' => (bool) $token->confirm_before_charge,
         ]);
     }
 
@@ -86,5 +88,27 @@ class MlAuthController extends Controller
     {
         MlToken::where('agency_id', $request->user()->agency_id)->delete();
         return response()->json(['ok' => true]);
+    }
+
+    /** PATCH /api/integrations/mercadolibre/settings */
+    public function updateSettings(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'default_listing_type' => ['nullable', 'string', 'in:auto,free,silver,gold,gold_special,gold_premium'],
+            'confirm_before_charge' => ['nullable', 'boolean'],
+        ]);
+
+        $token = MlToken::where('agency_id', $request->user()->agency_id)->first();
+        if (! $token) {
+            return response()->json(['message' => 'Mercado Libre no está conectado.'], 422);
+        }
+        $token->fill(array_filter($data, fn ($v) => $v !== null))->save();
+
+        return response()->json([
+            'data' => [
+                'default_listing_type' => $token->default_listing_type,
+                'confirm_before_charge' => (bool) $token->confirm_before_charge,
+            ],
+        ]);
     }
 }

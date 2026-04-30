@@ -15,6 +15,7 @@ class MlToken extends Model
         'access_token', 'refresh_token', 'token_type', 'scope',
         'expires_at', 'connected_by_user_id', 'connected_at',
         'last_refresh_at', 'last_error',
+        'default_listing_type', 'confirm_before_charge',
     ];
 
     protected $casts = [
@@ -23,6 +24,7 @@ class MlToken extends Model
         'expires_at' => 'datetime',
         'connected_at' => 'datetime',
         'last_refresh_at' => 'datetime',
+        'confirm_before_charge' => 'boolean',
     ];
 
     public function connectedBy(): BelongsTo

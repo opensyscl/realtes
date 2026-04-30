@@ -24,6 +24,7 @@ import {
   useMlIntegration,
   useConnectMl,
   useDisconnectMl,
+  useUpdateMlSettings,
 } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
@@ -241,10 +242,19 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 // ============================================================
 // Mercado Libre — la única funcional por ahora
 // ============================================================
+const TIER_OPTIONS: { id: string; label: string; hint: string }[] = [
+  { id: "auto", label: "Auto (mejor gratis disponible)", hint: "Usa free → gold premium → gold → silver, lo primero con fee 0" },
+  { id: "free", label: "Gratuita", hint: "Solo si tu cuenta tiene listings free disponibles" },
+  { id: "silver", label: "Plata", hint: "Mid exposure · aparece en Portal Inmobiliario" },
+  { id: "gold", label: "Oro", hint: "High exposure" },
+  { id: "gold_premium", label: "Oro Premium", hint: "Highest exposure (top en búsquedas)" },
+];
+
 function MercadoLibreCard() {
   const { data, isLoading } = useMlIntegration();
   const connect = useConnectMl();
   const disconnect = useDisconnectMl();
+  const updateSettings = useUpdateMlSettings();
 
   const connected = data?.connected ?? false;
   const expiresAt = data?.expires_at ? new Date(data.expires_at) : null;
@@ -309,6 +319,55 @@ function MercadoLibreCard() {
           )}
         </div>
       ) : null}
+
+      {/* Settings de publicación (solo si está conectado) */}
+      {connected && !isLoading && (
+        <div className="space-y-3 rounded-2xl border border-border-subtle bg-surface-muted/20 p-3">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Preferencias de publicación
+          </div>
+
+          <div>
+            <label className="text-xs font-medium">Tier por defecto</label>
+            <select
+              value={data?.default_listing_type ?? "auto"}
+              onChange={(e) =>
+                updateSettings.mutate({ default_listing_type: e.target.value })
+              }
+              disabled={updateSettings.isPending}
+              className="mt-1 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              {TIER_OPTIONS.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-[10px] text-foreground-muted">
+              {TIER_OPTIONS.find((t) => t.id === (data?.default_listing_type ?? "auto"))?.hint}
+            </p>
+          </div>
+
+          <label className="flex cursor-pointer items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-medium">Confirmar antes de cobrar</div>
+              <div className="text-[10px] text-foreground-muted">
+                Te muestra un modal con los tiers y fees antes de publicar.
+                Si lo apagás, publicamos directo con el tier por defecto.
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={data?.confirm_before_charge ?? true}
+              onChange={(e) =>
+                updateSettings.mutate({ confirm_before_charge: e.target.checked })
+              }
+              disabled={updateSettings.isPending}
+              className="h-4 w-4 accent-primary"
+            />
+          </label>
+        </div>
+      )}
 
       {/* Lista de capabilities */}
       {!connected && (

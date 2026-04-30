@@ -22,6 +22,7 @@ import {
   useDeleteMlPublication,
 } from "@/lib/queries";
 import { toast } from "@/lib/toast";
+import { MlPublishDialog } from "./ml-publish-dialog";
 
 const STATUS_LABEL: Record<
   string,
@@ -52,8 +53,10 @@ export function MlPublicationButtons({ propertyId }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const connected = integration.data?.connected ?? false;
+  const confirmBeforeCharge = integration.data?.confirm_before_charge ?? true;
   const pub = publication.data;
   const status = pub ? STATUS_LABEL[pub.ml_status] ?? STATUS_LABEL.active : null;
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const isLoading =
     publish.isPending ||
@@ -194,36 +197,60 @@ export function MlPublicationButtons({ propertyId }: Props) {
           )}
         </>
       ) : (
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={isLoading}
-          onClick={() =>
-            handleAction(async () => {
-              const r = await publish.mutateAsync();
-              if (r.ml_permalink) {
-                setTimeout(() => window.open(r.ml_permalink!, "_blank"), 300);
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isLoading}
+            onClick={() => {
+              // Si el setting de la agencia es "no confirmar", publicamos derecho
+              // (el backend usa el default tier — gratis si lo hay).
+              if (!confirmBeforeCharge) {
+                handleAction(async () => {
+                  const r = await publish.mutateAsync({});
+                  if (r.ml_permalink) {
+                    setTimeout(() => window.open(r.ml_permalink!, "_blank"), 300);
+                  }
+                }, "Propiedad publicada en Mercado Libre");
+              } else {
+                setDialogOpen(true);
               }
-            }, "Propiedad publicada en Mercado Libre")
-          }
-        >
-          {publish.isPending ? (
-            <>
-              <Icon icon={RefreshIcon} size={13} className="animate-spin" />
-              Publicando...
-            </>
-          ) : (
-            <>
-              <span
-                className="flex h-4 w-4 items-center justify-center rounded-md text-[9px] font-bold"
-                style={{ backgroundColor: "#FFE600", color: "#1f2937" }}
-              >
-                ML
-              </span>
-              Publicar en Mercado Libre
-            </>
-          )}
-        </Button>
+            }}
+          >
+            {publish.isPending ? (
+              <>
+                <Icon icon={RefreshIcon} size={13} className="animate-spin" />
+                Publicando...
+              </>
+            ) : (
+              <>
+                <span
+                  className="flex h-4 w-4 items-center justify-center rounded-md text-[9px] font-bold"
+                  style={{ backgroundColor: "#FFE600", color: "#1f2937" }}
+                >
+                  ML
+                </span>
+                Publicar en Mercado Libre
+              </>
+            )}
+          </Button>
+
+          <MlPublishDialog
+            propertyId={propertyId}
+            open={dialogOpen}
+            onClose={() => setDialogOpen(false)}
+            isPublishing={publish.isPending}
+            onConfirm={(listing_type_id) => {
+              handleAction(async () => {
+                const r = await publish.mutateAsync({ listing_type_id });
+                setDialogOpen(false);
+                if (r.ml_permalink) {
+                  setTimeout(() => window.open(r.ml_permalink!, "_blank"), 300);
+                }
+              }, "Propiedad publicada en Mercado Libre");
+            }}
+          />
+        </>
       )}
 
       {error && (

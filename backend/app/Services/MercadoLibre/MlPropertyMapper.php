@@ -11,9 +11,12 @@ class MlPropertyMapper
     /**
      * Construye el payload para POST /items.
      *
+     * Si $listingTypeOverride viene seteado (ej. del picker dinámico), pisa el
+     * default del category_map. Si no, usa el de la fila del map.
+     *
      * @return array{payload: array, category_id: string, listing_type_id: string}
      */
-    public function map(Property $property): array
+    public function map(Property $property, ?string $listingTypeOverride = null): array
     {
         $cat = MlCategoryMap::resolve(
             $property->agency_id,
@@ -34,6 +37,8 @@ class MlPropertyMapper
         }
 
         $title = $this->buildTitle($property);
+        $listingTypeId = $listingTypeOverride
+            ?: ($cat->listing_type_id ?: 'gold_special');
 
         $payload = [
             'title' => $title,
@@ -42,7 +47,7 @@ class MlPropertyMapper
             'currency_id' => strtoupper((string) ($property->currency ?: 'CLP')),
             'available_quantity' => 1,
             'buying_mode' => 'classified',
-            'listing_type_id' => $cat->listing_type_id ?: 'gold_special',
+            'listing_type_id' => $listingTypeId,
             'condition' => 'not_specified',
             'site_id' => (string) config('services.mercadolibre.site_id', 'MLC'),
             'pictures' => $this->buildPictures($property),
@@ -60,7 +65,7 @@ class MlPropertyMapper
         return [
             'payload' => $payload,
             'category_id' => $cat->category_id,
-            'listing_type_id' => $cat->listing_type_id ?: 'gold_special',
+            'listing_type_id' => $listingTypeId,
         ];
     }
 
