@@ -159,6 +159,8 @@ export interface Property {
   cover_image_url: string | null;
   is_published?: boolean;
   is_shared?: boolean;
+  is_archived?: boolean;
+  archived_at?: string | null;
   share_pct?: number | null;
   view_count?: number;
   last_viewed_at?: string | null;
@@ -206,6 +208,8 @@ export interface PropertyFilters {
   per_page?: number;
   sort?: string;
   dir?: "asc" | "desc";
+  /** "only" → solo archivadas, "with" → activas + archivadas, undefined → solo activas */
+  trashed?: "only" | "with";
 }
 
 export function useProperties(filters: PropertyFilters = {}) {
@@ -1250,11 +1254,13 @@ export interface PlanFeature {
 
 export interface Plan {
   id: number;
-  code: "starter" | "pro" | "business" | string;
+  code: "lite" | "pro" | "business" | "enterprise" | string;
   name: string;
   tagline: string | null;
   price_monthly: number;
   price_yearly: number;
+  overage_per_property: number;
+  overage_per_user: number;
   limits: PlanLimits;
   features: PlanFeature[];
   is_recommended: boolean;
@@ -1288,7 +1294,13 @@ export interface BillingMe {
     trial_days_left: number;
   };
   plan: Plan;
-  usage: Record<string, { current: number; limit: number | null }>;
+  usage: {
+    properties: { current: number; limit: number | null; over: number; overage_amount: number; percent: number };
+    users: { current: number; limit: number | null; over: number; overage_amount: number };
+    active_leads: { current: number; limit: number | null };
+    pipelines: { current: number; limit: number | null };
+    total_overage_amount: number;
+  };
 }
 
 export function useBillingMe() {
@@ -1738,7 +1750,13 @@ export function useDeleteDocument() {
   return useMutation({
     mutationFn: (id: number) => api.delete(`/api/documents/${id}`),
     onSuccess: () => {
+      // El endpoint DELETE /api/documents/{media} sirve para borrar tanto
+      // documents como photos (Spatie Media). Invalidamos todo lo que pueda
+      // estar mostrando ese media para que la UI refresque al instante.
       qc.invalidateQueries({ queryKey: ["documents"] });
+      qc.invalidateQueries({ queryKey: ["photos"] });
+      qc.invalidateQueries({ queryKey: ["property"] });
+      qc.invalidateQueries({ queryKey: ["properties"] });
     },
   });
 }
@@ -1992,6 +2010,43 @@ export function useSetCoverPhoto(propertyId: number) {
   return useMutation({
     mutationFn: (photoId: number) => api.post(`/api/photos/${photoId}/set-cover`),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["property", propertyId] });
+      qc.invalidateQueries({ queryKey: ["properties"] });
+    },
+  });
+}
+
+/** Re-aplicar el watermark configurado en la agency a una foto existente. */
+export function useApplyWatermark(propertyId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (photoId: number) => {
+      const res = await api.post<{ data: Document }>(
+        `/api/photos/${photoId}/apply-watermark`,
+      );
+      return res.data.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["photos", propertyId] });
+      qc.invalidateQueries({ queryKey: ["property", propertyId] });
+      qc.invalidateQueries({ queryKey: ["properties"] });
+    },
+  });
+}
+
+/** Aplicar watermark a TODAS las fotos de una propiedad de un saque. */
+export function useApplyWatermarkAll(propertyId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (force?: boolean) => {
+      const res = await api.post<{ ok: boolean; applied: number; skipped: number }>(
+        `/api/properties/${propertyId}/photos/apply-watermark`,
+        { force: force ?? false },
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["photos", propertyId] });
       qc.invalidateQueries({ queryKey: ["property", propertyId] });
       qc.invalidateQueries({ queryKey: ["properties"] });
     },
@@ -2595,5 +2650,181 @@ export function useDeleteApiToken() {
       await api.delete(`/api/tokens/${id}`);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["api-tokens"] }),
+  });
+}
+
+// ===========================================================
+// Property inspections — actas de entrega/recepción/inspección
+// ===========================================================
+export type InspectionType =
+  | "entrega"
+  | "recepcion"
+  | "inspeccion"
+  | "devolucion"
+  | "reparacion"
+  | "otro";
+
+export type InspectionCondition = "excelente" | "bueno" | "regular" | "malo";
+
+export interface InspectionPhoto {
+  id: number;
+  url: string;
+  name: string;
+  mime_type: string;
+  size: number;
+  description: string | null;
+  note: string | null;
+  tag: string | null;
+}
+
+export interface PropertyInspection {
+  id: number;
+  property_id: number;
+  contract_id: number | null;
+  type: InspectionType;
+  title: string;
+  description: string | null;
+  inspection_date: string; // YYYY-MM-DD
+  inspector_name: string | null;
+  condition: InspectionCondition | null;
+  signed_by_tenant: boolean;
+  tenant_signed_at: string | null;
+  signed_by_landlord: boolean;
+  landlord_signed_at: string | null;
+  created_by?: { id: number; name: string } | null;
+  photos: InspectionPhoto[];
+  photos_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateInspectionInput {
+  type: InspectionType;
+  title: string;
+  description?: string | null;
+  inspection_date: string;
+  inspector_name?: string | null;
+  condition?: InspectionCondition | null;
+  contract_id?: number | null;
+}
+
+export interface UpdateInspectionInput extends Partial<CreateInspectionInput> {
+  signed_by_tenant?: boolean;
+  signed_by_landlord?: boolean;
+}
+
+export function usePropertyInspections(
+  propertyId: number | string | null | undefined,
+) {
+  return useQuery({
+    queryKey: ["inspections", "by-property", propertyId],
+    enabled: propertyId !== null && propertyId !== undefined,
+    queryFn: async () => {
+      const res = await api.get<{ data: PropertyInspection[] }>(
+        `/api/properties/${propertyId}/inspections`,
+      );
+      return res.data.data;
+    },
+  });
+}
+
+export function useCreateInspection(propertyId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CreateInspectionInput) => {
+      const res = await api.post<{ data: PropertyInspection }>(
+        `/api/properties/${propertyId}/inspections`,
+        input,
+      );
+      return res.data.data;
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({
+        queryKey: ["inspections", "by-property", propertyId],
+      }),
+  });
+}
+
+export function useUpdateInspection() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...patch
+    }: UpdateInspectionInput & { id: number }) => {
+      const res = await api.patch<{ data: PropertyInspection }>(
+        `/api/inspections/${id}`,
+        patch,
+      );
+      return res.data.data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["inspections"] }),
+  });
+}
+
+export function useDeleteInspection() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.delete(`/api/inspections/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["inspections"] }),
+  });
+}
+
+export interface UploadInspectionPhotoInput {
+  file: File;
+  description?: string | null;
+  note?: string | null;
+  tag?: string | null;
+}
+
+export function useUploadInspectionPhoto(inspectionId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: UploadInspectionPhotoInput | File) => {
+      const data = input instanceof File ? { file: input } : input;
+      const fd = new FormData();
+      fd.append("file", data.file);
+      if (data.description) fd.append("description", data.description);
+      if (data.note) fd.append("note", data.note);
+      if (data.tag) fd.append("tag", data.tag);
+      const res = await api.post<{ data: InspectionPhoto }>(
+        `/api/inspections/${inspectionId}/photos`,
+        fd,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      return res.data.data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["inspections"] }),
+  });
+}
+
+export function useUpdateInspectionPhoto() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      mediaId,
+      ...patch
+    }: {
+      mediaId: number;
+      description?: string | null;
+      note?: string | null;
+      tag?: string | null;
+    }) => {
+      const res = await api.patch<{ data: InspectionPhoto }>(
+        `/api/inspections/photos/${mediaId}`,
+        patch,
+      );
+      return res.data.data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["inspections"] }),
+  });
+}
+
+export function useDeleteInspectionPhoto() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (mediaId: number) =>
+      api.delete(`/api/inspections/photos/${mediaId}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["inspections"] }),
   });
 }

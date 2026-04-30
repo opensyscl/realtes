@@ -104,6 +104,9 @@ export function WatermarkTab() {
         )}
       </Card>
 
+      {/* Preview en vivo */}
+      <WatermarkPreview settings={s} watermarkImageUrl={imageUrl ?? null} />
+
       {/* Aplicación */}
       <Card className="p-5">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
@@ -522,3 +525,191 @@ function SliderRow({
     </Field>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Live preview — replicates the backend watermark using CSS.
+// Match con WatermarkService.php: alignment 9 anchors, padding (px|%),
+// width % del cover, opacity, modo image|text con color de texto.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SAMPLE_PROPERTIES = [
+  {
+    label: "Cocina moderna",
+    src: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1200&q=80",
+  },
+  {
+    label: "Living acogedor",
+    src: "https://images.unsplash.com/photo-1567767292278-a4f21aa2d36e?w=1200&q=80",
+  },
+  {
+    label: "Fachada exterior",
+    src: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1200&q=80",
+  },
+];
+
+function WatermarkPreview({
+  settings: s,
+  watermarkImageUrl,
+}: {
+  settings: WatermarkSettings;
+  watermarkImageUrl: string | null;
+}) {
+  const [sampleIdx, setSampleIdx] = useState(0);
+  const sample = SAMPLE_PROPERTIES[sampleIdx];
+
+  // Mapear la alignment a estilos CSS de posición
+  const alignmentStyle = ALIGNMENT_TO_STYLE[s.alignment] ?? ALIGNMENT_TO_STYLE.bottom_right;
+
+  // Padding/offset — el backend respeta unidad (px|%)
+  const offsetX = Math.abs(s.offset_x ?? 0);
+  const offsetY = Math.abs(s.offset_y ?? 0);
+  const offsetUnit = s.offset_unit === "percent" ? "%" : "px";
+
+  // Width % del cover — replica `widthUnit: Percent`
+  const widthPct =
+    s.size_mode === "original" ? 30 : Math.max(5, Math.min(100, s.size_value));
+
+  const opacity = Math.max(0, Math.min(100, s.opacity)) / 100;
+  const isText = s.type === "text";
+  const text = (s.text || "Tu marca de agua").trim();
+  const noImage = !isText && !watermarkImageUrl;
+
+  return (
+    <Card className="overflow-hidden p-0">
+      <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-5 py-3">
+        <div>
+          <h3 className="text-sm font-semibold tracking-tight">Vista previa en vivo</h3>
+          <p className="mt-0.5 text-[11px] text-foreground-muted">
+            Así se va a ver el watermark sobre las fotos. Cambia los ajustes y
+            actualiza al toque.
+          </p>
+        </div>
+        <div className="inline-flex items-center gap-1 rounded-full border border-border bg-surface p-1">
+          {SAMPLE_PROPERTIES.map((sm, i) => (
+            <button
+              key={sm.label}
+              type="button"
+              onClick={() => setSampleIdx(i)}
+              className={cn(
+                "rounded-full px-2.5 py-1 text-[10px] font-medium transition-colors",
+                i === sampleIdx
+                  ? "bg-foreground text-accent-foreground"
+                  : "text-foreground-muted hover:bg-surface-muted",
+              )}
+            >
+              {sm.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Preview image */}
+      <div className="relative aspect-[16/10] w-full overflow-hidden bg-surface-muted">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={sample.src}
+          alt={sample.label}
+          className="h-full w-full object-cover"
+        />
+
+        {/* Overlay del watermark */}
+        {s.enabled && !noImage && (
+          <div
+            className="pointer-events-none absolute"
+            style={{
+              ...alignmentStyle,
+              padding:
+                offsetX || offsetY
+                  ? `${offsetY}${offsetUnit} ${offsetX}${offsetUnit}`
+                  : 0,
+              width: `${widthPct}%`,
+              maxWidth: `${widthPct}%`,
+              opacity,
+            }}
+          >
+            {isText ? (
+              <div
+                className="font-serif text-2xl font-bold leading-none drop-shadow-md sm:text-3xl"
+                style={{
+                  color: s.text_color || "#ffffff",
+                  textAlign: textAlignFor(s.alignment),
+                  // tamaño escalado al ancho del contenedor
+                  fontSize: `${Math.max(0.6, widthPct / 18)}rem`,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {text}
+              </div>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={watermarkImageUrl!}
+                alt="Watermark"
+                className="h-auto w-full object-contain"
+                style={{
+                  marginLeft: marginAlignFor(s.alignment).x,
+                  marginRight:
+                    marginAlignFor(s.alignment).x === "auto" ? 0 : "auto",
+                }}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Estado overlay cuando está deshabilitado o falta imagen */}
+        {!s.enabled && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/45 backdrop-blur-[2px]">
+            <span className="rounded-full bg-white/95 px-3 py-1.5 text-[12px] font-semibold text-foreground shadow-lg">
+              Marca de agua desactivada
+            </span>
+          </div>
+        )}
+        {s.enabled && noImage && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/45 backdrop-blur-[2px]">
+            <span className="rounded-full bg-warning px-3 py-1.5 text-[12px] font-semibold text-white shadow-lg">
+              Subí una imagen de marca de agua para ver el preview
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between border-t border-border-subtle px-5 py-2.5 text-[11px] text-foreground-muted">
+        <span>
+          Modo: <strong className="text-foreground">{isText ? "Texto" : "Imagen"}</strong>{" "}
+          · Posición: <strong className="text-foreground">{ALIGNMENT_LABEL[s.alignment]}</strong>
+        </span>
+        <span className="tabular-numbers">
+          {widthPct}% · opacidad {Math.round(opacity * 100)}%
+        </span>
+      </div>
+    </Card>
+  );
+}
+
+const ALIGNMENT_TO_STYLE: Record<WatermarkAlignment, React.CSSProperties> = {
+  top_left: { top: 0, left: 0 },
+  top: { top: 0, left: "50%", transform: "translateX(-50%)" },
+  top_right: { top: 0, right: 0 },
+  left: { top: "50%", left: 0, transform: "translateY(-50%)" },
+  center: { top: "50%", left: "50%", transform: "translate(-50%, -50%)" },
+  right: { top: "50%", right: 0, transform: "translateY(-50%)" },
+  bottom_left: { bottom: 0, left: 0 },
+  bottom: { bottom: 0, left: "50%", transform: "translateX(-50%)" },
+  bottom_right: { bottom: 0, right: 0 },
+};
+
+function textAlignFor(a: WatermarkAlignment): React.CSSProperties["textAlign"] {
+  if (a === "top_left" || a === "left" || a === "bottom_left") return "left";
+  if (a === "top_right" || a === "right" || a === "bottom_right") return "right";
+  return "center";
+}
+
+function marginAlignFor(a: WatermarkAlignment): { x: string } {
+  if (a === "top" || a === "bottom" || a === "center") return { x: "auto" };
+  if (a === "top_right" || a === "right" || a === "bottom_right")
+    return { x: "auto" };
+  return { x: "0" };
+}
+

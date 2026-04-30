@@ -88,6 +88,7 @@ const STATUS_OPTIONS = [
   { value: "vendida", label: "Vendidas" },
   { value: "reservada", label: "Reservadas" },
   { value: "mantenimiento", label: "En mantenimiento" },
+  { value: "__archived__", label: "Archivadas" },
 ];
 
 export default function PropertiesPage() {
@@ -114,9 +115,11 @@ export default function PropertiesPage() {
   };
 
   const stats = usePropertyStats();
+  const showingArchived = status === "__archived__";
   const { data, isLoading } = useProperties({
     search: search || undefined,
-    status: status || undefined,
+    status: showingArchived ? undefined : status || undefined,
+    trashed: showingArchived ? "only" : undefined,
     page,
     per_page: view === "table" ? 25 : 12,
     sort: sort.field,
@@ -785,7 +788,9 @@ function ContractRow({ property: p }: { property: Property }) {
 }
 
 function PropertyCard({ property: p }: { property: Property }) {
-  const status = STATUS_VARIANT[p.status] ?? { label: p.status, tone: "neutral" as const };
+  const status = p.is_archived
+    ? { label: "Archivada", tone: "neutral" as const }
+    : (STATUS_VARIANT[p.status] ?? { label: p.status, tone: "neutral" as const });
   const selected = usePropertySelection((s) => s.ids.has(p.id));
   const toggle = usePropertySelection((s) => s.toggle);
   const anySelected = usePropertySelection((s) => s.ids.size > 0);

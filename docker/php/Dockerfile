@@ -2,9 +2,10 @@ FROM php:8.3-fpm-alpine
 
 RUN apk add --no-cache \
     bash git curl icu-dev libzip-dev oniguruma-dev libpng-dev jpeg-dev freetype-dev \
+    libwebp-dev libavif-dev \
     postgresql-dev libpq-dev \
     autoconf g++ make linux-headers \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp --with-avif \
     && docker-php-ext-install -j"$(nproc)" \
         pdo_pgsql pgsql intl zip bcmath opcache gd pcntl exif \
     && pecl install redis \

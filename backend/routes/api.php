@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\CommissionController;
 use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DocumentController;
+use App\Http\Controllers\Api\PropertyInspectionController;
 use App\Http\Controllers\Api\EmailController;
 use App\Http\Controllers\Api\FeedController;
 use App\Http\Controllers\Api\LeadController;
@@ -202,6 +203,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/commissions/{commission}/pay', [CommissionController::class, 'pay']);
     Route::delete('/commissions/{commission}', [CommissionController::class, 'destroy']);
 
+    // Property inspections (actas de entrega/recepción/inspección)
+    Route::get('/properties/{property}/inspections', [PropertyInspectionController::class, 'index']);
+    Route::post('/properties/{property}/inspections', [PropertyInspectionController::class, 'store']);
+    Route::patch('/inspections/{inspection}', [PropertyInspectionController::class, 'update']);
+    Route::delete('/inspections/{inspection}', [PropertyInspectionController::class, 'destroy']);
+    Route::post('/inspections/{inspection}/photos', [PropertyInspectionController::class, 'uploadPhoto']);
+    Route::patch('/inspections/photos/{media}', [PropertyInspectionController::class, 'updatePhoto']);
+    Route::delete('/inspections/photos/{media}', [PropertyInspectionController::class, 'destroyPhoto']);
+
     // Documents (Spatie media library)
     Route::get('/properties/{property}/documents', [DocumentController::class, 'indexProperty']);
     Route::post('/properties/{property}/documents', [DocumentController::class, 'storeProperty']);
@@ -213,8 +223,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/properties/{property}/photos', [DocumentController::class, 'indexPhotos']);
     Route::post('/properties/{property}/photos', [DocumentController::class, 'storePhoto']);
     Route::post('/properties/{property}/photos/reorder', [DocumentController::class, 'reorderPhotos']);
+    Route::post('/properties/{property}/photos/apply-watermark', [DocumentController::class, 'applyWatermarkBulk']);
     Route::post('/photos/{media}/set-cover', [DocumentController::class, 'setCover']);
     Route::post('/photos/{media}/replace', [DocumentController::class, 'replacePhoto']);
+    Route::post('/photos/{media}/apply-watermark', [DocumentController::class, 'applyWatermark']);
 
     // Property analytics + history
     Route::get('/properties/{property}/analytics', [PropertyController::class, 'analytics']);

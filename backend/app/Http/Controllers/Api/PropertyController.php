@@ -21,9 +21,19 @@ class PropertyController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
+        // ?trashed=only  → solo archivadas
+        // ?trashed=with  → activas + archivadas
+        // (default)      → solo activas (excluye soft-deleted)
+        $trashedMode = $request->string('trashed')->toString();
         $q = Property::query()
             ->with(['building', 'activeContract'])
             ->withCount('leads');
+
+        if ($trashedMode === 'only') {
+            $q->onlyTrashed();
+        } elseif ($trashedMode === 'with') {
+            $q->withTrashed();
+        }
 
         if ($search = $request->string('search')->toString()) {
             $q->where(function ($w) use ($search) {

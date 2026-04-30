@@ -8,6 +8,7 @@ import {
   Download01Icon,
   PropertyNewIcon,
   ArrowUp01Icon,
+  RestoreBinIcon,
 } from "@hugeicons/core-free-icons";
 
 import { Icon } from "@/components/ui/icon";
@@ -93,6 +94,28 @@ export function SelectionBar({ allProperties }: { allProperties: Property[] }) {
     }
   };
 
+  const handleRestore = async () => {
+    const ok = await toast.confirm({
+      title: `¿Restaurar ${ids.length} propiedad${ids.length === 1 ? "" : "es"}?`,
+      description: "Volverán al listado activo y podrán editarse normalmente.",
+      confirmLabel: "Restaurar",
+    });
+    if (!ok) return;
+    try {
+      await toast.promise(bulk.mutateAsync({ action: "restore", ids }), {
+        loading: { title: "Restaurando…" },
+        success: { title: "Propiedades restauradas" },
+        error: (err: unknown) => ({
+          title: "Error",
+          description: err instanceof Error ? err.message : "",
+        }),
+      });
+      clear();
+    } catch {
+      // toast ya muestra el error
+    }
+  };
+
   const handleExportCsv = () => {
     const rows = selectedProps.map((p) => ({
       codigo: p.code,
@@ -135,6 +158,10 @@ export function SelectionBar({ allProperties }: { allProperties: Property[] }) {
 
   const totalRent = selectedProps.reduce((s, p) => s + (p.price_rent ?? 0), 0);
   const canCompare = ids.length >= 2 && ids.length <= 4;
+  // Si TODAS las propiedades seleccionadas están archivadas, mostrar "Restaurar"
+  // en vez de "Archivar". Si están mezcladas o no archivadas, archivar.
+  const allArchived =
+    selectedProps.length > 0 && selectedProps.every((p) => p.is_archived);
 
   return (
     <>
@@ -154,30 +181,33 @@ export function SelectionBar({ allProperties }: { allProperties: Property[] }) {
 
           <div className="mx-2 h-5 w-px bg-accent-foreground/20" />
 
-          {/* Cambiar estado */}
-          <div className="relative">
-            <button
-              onClick={() => setStatusOpen((o) => !o)}
-              className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium hover:bg-accent-foreground/10"
-            >
-              <Icon icon={PropertyNewIcon} size={13} />
-              Estado
-              <Icon icon={ArrowUp01Icon} size={11} />
-            </button>
-            {statusOpen && (
-              <div className="absolute bottom-full left-0 mb-2 w-44 rounded-2xl border border-border bg-surface p-1 text-foreground shadow-xl">
-                {STATUS_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => handleStatusChange(opt.value)}
-                    className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm hover:bg-surface-muted"
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Cambiar estado — sólo aplicable a propiedades activas. Para
+              archivadas hay que restaurar primero. */}
+          {!allArchived && (
+            <div className="relative">
+              <button
+                onClick={() => setStatusOpen((o) => !o)}
+                className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium hover:bg-accent-foreground/10"
+              >
+                <Icon icon={PropertyNewIcon} size={13} />
+                Estado
+                <Icon icon={ArrowUp01Icon} size={11} />
+              </button>
+              {statusOpen && (
+                <div className="absolute bottom-full left-0 mb-2 w-44 rounded-2xl border border-border bg-surface p-1 text-foreground shadow-xl">
+                  {STATUS_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => handleStatusChange(opt.value)}
+                      className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm hover:bg-surface-muted"
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Comparar */}
           <button
@@ -204,14 +234,24 @@ export function SelectionBar({ allProperties }: { allProperties: Property[] }) {
             CSV
           </button>
 
-          {/* Archive */}
-          <button
-            onClick={handleArchive}
-            className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium hover:bg-negative-soft/10 hover:text-negative"
-          >
-            <Icon icon={Delete02Icon} size={13} />
-            Archivar
-          </button>
+          {/* Archive / Restore — switch según estado */}
+          {allArchived ? (
+            <button
+              onClick={handleRestore}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium hover:bg-positive-soft/15 hover:text-positive"
+            >
+              <Icon icon={RestoreBinIcon} size={13} />
+              Restaurar
+            </button>
+          ) : (
+            <button
+              onClick={handleArchive}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium hover:bg-negative-soft/10 hover:text-negative"
+            >
+              <Icon icon={Delete02Icon} size={13} />
+              Archivar
+            </button>
+          )}
 
           <div className="mx-1 h-5 w-px bg-accent-foreground/20" />
 

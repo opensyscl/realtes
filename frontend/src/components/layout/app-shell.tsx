@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { TrialBanner } from "@/components/billing/trial-banner";
+import { UsageBanner } from "@/components/billing/usage-banner";
 import { useUiStore } from "@/store/ui";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +41,7 @@ export function AppShell({ children }: AppShellProps) {
         )}
       >
         <TrialBanner />
+        <UsageBanner />
         <Topbar />
         <main className="flex-1">{children}</main>
       </div>

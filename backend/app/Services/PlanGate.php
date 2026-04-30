@@ -137,25 +137,48 @@ class PlanGate
 
         $get = fn (string $k) => $plan?->limit($k);
 
+        $propsCurrent = (int) Property::withoutGlobalScopes()->where('agency_id', $agency->id)->count();
+        $usersCurrent = (int) User::where('agency_id', $agency->id)->where('active', true)->count();
+        $leadsCurrent = (int) Lead::withoutGlobalScopes()->where('agency_id', $agency->id)->where('status', 'open')->count();
+        $pipesCurrent = (int) Pipeline::withoutGlobalScopes()->where('agency_id', $agency->id)->count();
+
+        $propLimit = (int) ($get('max_properties') ?? 0);
+        $userLimit = (int) ($get('max_users') ?? 0);
+
+        $propsOver = $propLimit > 0 ? max(0, $propsCurrent - $propLimit) : 0;
+        $usersOver = $userLimit > 0 ? max(0, $usersCurrent - $userLimit) : 0;
+
+        $propsOverageAmount = $propsOver * (float) ($plan->overage_per_property ?? 0);
+        $usersOverageAmount = $usersOver * (float) ($plan->overage_per_user ?? 0);
+
+        // % de propiedades usadas (capeado al 100%, para barra de progreso)
+        $percentProps = $propLimit > 0
+            ? (int) min(100, round(($propsCurrent / $propLimit) * 100))
+            : 0;
+
         return [
             'properties' => [
-                'current' => (int) Property::withoutGlobalScopes()->where('agency_id', $agency->id)->count(),
+                'current' => $propsCurrent,
                 'limit' => $get('max_properties'),
+                'over' => $propsOver,
+                'overage_amount' => $propsOverageAmount,
+                'percent' => $percentProps,
             ],
             'users' => [
-                'current' => (int) User::where('agency_id', $agency->id)->where('active', true)->count(),
+                'current' => $usersCurrent,
                 'limit' => $get('max_users'),
+                'over' => $usersOver,
+                'overage_amount' => $usersOverageAmount,
             ],
             'active_leads' => [
-                'current' => (int) Lead::withoutGlobalScopes()
-                    ->where('agency_id', $agency->id)
-                    ->where('status', 'open')->count(),
+                'current' => $leadsCurrent,
                 'limit' => $get('max_active_leads'),
             ],
             'pipelines' => [
-                'current' => (int) Pipeline::withoutGlobalScopes()->where('agency_id', $agency->id)->count(),
+                'current' => $pipesCurrent,
                 'limit' => $get('max_pipelines'),
             ],
+            'total_overage_amount' => $propsOverageAmount + $usersOverageAmount,
         ];
     }
 }

@@ -9,6 +9,8 @@ import {
   ImageUploadIcon,
   Exchange02Icon,
   DragDropIcon,
+  ImageDone02Icon,
+  ZapIcon,
 } from "@hugeicons/core-free-icons";
 import {
   DndContext,
@@ -38,6 +40,9 @@ import {
   useDeleteDocument,
   useReorderPhotos,
   useReplacePhoto,
+  useApplyWatermark,
+  useApplyWatermarkAll,
+  useAgencyWatermark,
   type Document,
 } from "@/lib/queries";
 import { toast } from "@/lib/toast";
@@ -50,12 +55,18 @@ interface Props {
 
 export function PhotoGallery({ propertyId, coverUrl }: Props) {
   const { data, isLoading } = usePhotos(propertyId);
+  const { data: wmData } = useAgencyWatermark();
   const upload = useUploadPhoto(propertyId);
   const setCover = useSetCoverPhoto(propertyId);
   const del = useDeleteDocument();
   const reorder = useReorderPhotos(propertyId);
   const replace = useReplacePhoto(propertyId);
+  const watermark = useApplyWatermark(propertyId);
+  const watermarkAll = useApplyWatermarkAll(propertyId);
   const confirm = useConfirm();
+
+  const watermarkEnabled =
+    wmData?.settings?.enabled === true && wmData?.settings?.manual_apply_enabled !== false;
 
   const inputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
@@ -113,6 +124,40 @@ export function PhotoGallery({ propertyId, coverUrl }: Props) {
     if (replaceInputRef.current) replaceInputRef.current.value = "";
   };
 
+  const handleApplyWatermark = async (photoId: number) => {
+    await toast.promise(watermark.mutateAsync(photoId), {
+      loading: { title: "Aplicando marca de agua..." },
+      success: { title: "Marca de agua aplicada" },
+      error: (err: unknown) => ({
+        title: "No se pudo aplicar",
+        description: err instanceof Error ? err.message : "",
+      }),
+    });
+  };
+
+  const handleApplyWatermarkAll = async () => {
+    const ok = await confirm({
+      title: "¿Aplicar marca de agua a todas las fotos?",
+      description:
+        "Las fotos existentes (incluida la portada) se reprocesarán. Esto puede tardar unos segundos según la cantidad de fotos. La operación es irreversible — guarda las originales si las necesitás.",
+      confirmLabel: "Aplicar a todas",
+      danger: false,
+    });
+    if (!ok) return;
+
+    await toast.promise(watermarkAll.mutateAsync(true), {
+      loading: { title: "Procesando todas las fotos..." },
+      success: (data) => ({
+        title: "Marca de agua aplicada",
+        description: `${data.applied} foto${data.applied === 1 ? "" : "s"} procesada${data.applied === 1 ? "" : "s"}${data.skipped ? `, ${data.skipped} omitida${data.skipped === 1 ? "" : "s"}` : ""}`,
+      }),
+      error: (err: unknown) => ({
+        title: "No se pudo aplicar",
+        description: err instanceof Error ? err.message : "",
+      }),
+    });
+  };
+
   const handleDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
@@ -141,10 +186,23 @@ export function PhotoGallery({ propertyId, coverUrl }: Props) {
             )}
           </p>
         </div>
-        <Button onClick={() => inputRef.current?.click()} disabled={upload.isPending}>
-          <Icon icon={CloudUploadIcon} size={14} />
-          {upload.isPending ? "Subiendo..." : "Añadir foto"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {watermarkEnabled && photos.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleApplyWatermarkAll}
+              loading={watermarkAll.isPending}
+              title="Aplicar la marca de agua actual a TODAS las fotos (útil para fotos viejas)"
+            >
+              <Icon icon={ImageDone02Icon} size={14} />
+              Aplicar marca a todas
+            </Button>
+          )}
+          <Button onClick={() => inputRef.current?.click()} disabled={upload.isPending}>
+            <Icon icon={CloudUploadIcon} size={14} />
+            {upload.isPending ? "Subiendo..." : "Añadir foto"}
+          </Button>
+        </div>
       </div>
 
       <input
@@ -226,6 +284,11 @@ export function PhotoGallery({ propertyId, coverUrl }: Props) {
                       toast.success("Foto marcada como portada");
                     }}
                     onReplace={() => handleReplaceSelect(p.id)}
+                    onApplyWatermark={
+                      watermarkEnabled
+                        ? () => handleApplyWatermark(p.id)
+                        : undefined
+                    }
                     onDelete={async () => {
                       const ok = await confirm({
                         title: "¿Eliminar esta foto?",
@@ -239,6 +302,10 @@ export function PhotoGallery({ propertyId, coverUrl }: Props) {
                       }
                     }}
                     isReplacing={replace.isPending && replaceTargetId === p.id}
+                    isApplyingWatermark={
+                      watermark.isPending &&
+                      watermark.variables === p.id
+                    }
                   />
                 ))}
               </div>
@@ -279,8 +346,10 @@ function SortablePhoto({
   onZoom,
   onSetCover,
   onReplace,
+  onApplyWatermark,
   onDelete,
   isReplacing,
+  isApplyingWatermark,
 }: {
   photo: Document;
   index: number;
@@ -288,8 +357,10 @@ function SortablePhoto({
   onZoom: () => void;
   onSetCover: () => void;
   onReplace: () => void;
+  onApplyWatermark?: () => void;
   onDelete: () => void;
   isReplacing: boolean;
+  isApplyingWatermark?: boolean;
 }) {
   const {
     attributes,
@@ -329,11 +400,12 @@ function SortablePhoto({
         {...listeners}
       />
 
-      {/* Loading overlay durante replace */}
-      {isReplacing && (
+      {/* Loading overlay durante replace o aplicación de watermark */}
+      {(isReplacing || isApplyingWatermark) && (
         <div className="absolute inset-0 flex items-center justify-center bg-surface/40 backdrop-blur-sm">
-          <div className="rounded-full bg-surface px-3 py-1 text-[11px] font-medium shadow-card">
-            Reemplazando...
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1 text-[11px] font-medium shadow-card">
+            <Icon icon={ZapIcon} size={11} />
+            {isApplyingWatermark ? "Aplicando marca..." : "Reemplazando..."}
           </div>
         </div>
       )}
@@ -368,6 +440,14 @@ function SortablePhoto({
           title="Reemplazar imagen"
           aria-label="Reemplazar"
         />
+        {onApplyWatermark && (
+          <ActionBtn
+            icon={ImageDone02Icon}
+            onClick={onApplyWatermark}
+            title="Aplicar marca de agua"
+            aria-label="Aplicar marca de agua"
+          />
+        )}
         <ActionBtn
           icon={Delete02Icon}
           onClick={onDelete}

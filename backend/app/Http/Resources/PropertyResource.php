@@ -130,6 +130,8 @@ class PropertyResource extends JsonResource
             }),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
+            'archived_at' => $this->deleted_at?->toIso8601String(),
+            'is_archived' => $this->deleted_at !== null,
         ];
     }
 }

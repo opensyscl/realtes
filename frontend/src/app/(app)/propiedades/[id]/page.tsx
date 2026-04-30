@@ -32,6 +32,7 @@ import {
   Time01Icon,
   Home05Icon,
   UserCircleIcon,
+  InspectCodeIcon,
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 
@@ -52,6 +53,7 @@ import {
   type PropertyEvent,
 } from "@/lib/queries";
 import { DocumentDropZone } from "@/components/documents/document-dropzone";
+import { InspectionsTab } from "@/components/properties/inspections-tab";
 import { PropertyMessagesDrawer } from "@/components/properties/property-messages-drawer";
 import { toast } from "@/lib/toast";
 import { usePropertyLeads } from "@/lib/queries";
@@ -69,12 +71,25 @@ const STATUS_VARIANT: Record<
   mantenimiento: { label: "En mantenimiento", tone: "warning" },
 };
 
-type TabId = "info" | "contrato" | "cargos" | "documentos" | "historial";
+type TabId =
+  | "info"
+  | "contrato"
+  | "cargos"
+  | "actas"
+  | "documentos"
+  | "historial";
 
-const TABS: { id: TabId; label: string; icon: IconSvgElement }[] = [
+const ALL_TABS: {
+  id: TabId;
+  label: string;
+  icon: IconSvgElement;
+  rentedOnly?: boolean;
+}[] = [
   { id: "info", label: "Información", icon: InformationCircleIcon },
   { id: "contrato", label: "Contrato activo", icon: Agreement02Icon },
   { id: "cargos", label: "Cargos", icon: CashIcon },
+  // Las actas sólo tienen sentido cuando hay arriendo activo / reciente
+  { id: "actas", label: "Actas", icon: InspectCodeIcon, rentedOnly: true },
   { id: "documentos", label: "Documentos", icon: DocumentAttachmentIcon },
   { id: "historial", label: "Historial", icon: Time01Icon },
 ];
@@ -131,6 +146,9 @@ export default function PropertyDetailPage({
 
   const status = STATUS_VARIANT[p.status] ?? { label: p.status, tone: "neutral" as const };
   const isRent = !!p.price_rent;
+  // Mostrar tab "Actas" sólo si la propiedad está arrendada o tiene contrato activo
+  const showRentedTabs = p.status === "arrendada" || !!p.active_contract;
+  const visibleTabs = ALL_TABS.filter((t) => !t.rentedOnly || showRentedTabs);
 
   return (
     <div className="px-6 py-6">
@@ -331,7 +349,7 @@ export default function PropertyDetailPage({
 
       {/* Tabs en pills con iconos */}
       <div className="mt-7 inline-flex items-center gap-0.5 rounded-2xl border border-border bg-surface-muted/60 p-1 shadow-button-secondary">
-        {TABS.map((t) => {
+        {visibleTabs.map((t) => {
           const active = tab === t.id;
           return (
             <button
@@ -359,6 +377,12 @@ export default function PropertyDetailPage({
         {tab === "info" && <InfoTab property={p} />}
         {tab === "contrato" && <ContractTab property={p} />}
         {tab === "cargos" && <ChargesTab propertyId={p.id} contractId={p.active_contract?.id} />}
+        {tab === "actas" && (
+          <InspectionsTab
+            propertyId={p.id}
+            contractId={p.active_contract?.id ?? null}
+          />
+        )}
         {tab === "documentos" && <DocumentDropZone owner="properties" ownerId={p.id} />}
         {tab === "historial" && <HistoryTab propertyId={p.id} currentStatus={p.status} />}
       </div>
