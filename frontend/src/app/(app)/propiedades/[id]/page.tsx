@@ -54,6 +54,7 @@ import {
 } from "@/lib/queries";
 import { DocumentDropZone } from "@/components/documents/document-dropzone";
 import { InspectionsTab } from "@/components/properties/inspections-tab";
+import { MlPublicationCard } from "@/components/properties/ml-publication-card";
 import { PropertyMessagesDrawer } from "@/components/properties/property-messages-drawer";
 import { toast } from "@/lib/toast";
 import { usePropertyLeads } from "@/lib/queries";
@@ -257,6 +258,11 @@ export default function PropertyDetailPage({
               isShared={p.is_shared ?? false}
               sharePct={p.share_pct ?? 50}
             />
+          </Card>
+
+          {/* Mercado Libre / Portal Inmobiliario */}
+          <Card className="space-y-2 p-4">
+            <MlPublicationCard propertyId={p.id} />
           </Card>
 
           {/* Compartir público */}

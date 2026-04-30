@@ -2879,3 +2879,85 @@ export function useDisconnectMl() {
       qc.invalidateQueries({ queryKey: ["integrations", "mercadolibre"] }),
   });
 }
+
+// ===========================================================
+// ML Publications — gestión por propiedad
+// ===========================================================
+export interface MlPublication {
+  id: number;
+  property_id: number;
+  ml_item_id: string;
+  ml_permalink: string | null;
+  ml_status: "active" | "paused" | "closed" | "under_review";
+  ml_category_id: string;
+  listing_type_id: string;
+  last_synced_at: string | null;
+  published_at: string | null;
+  last_error: string | null;
+}
+
+export function useMlPublication(propertyId: number) {
+  return useQuery({
+    queryKey: ["ml", "publication", propertyId],
+    queryFn: async () => {
+      const res = await api.get<{ data: MlPublication | null }>(
+        `/api/integrations/mercadolibre/properties/${propertyId}`,
+      );
+      return res.data.data;
+    },
+    staleTime: 15_000,
+  });
+}
+
+export function usePublishToMl(propertyId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await api.post<{ data: MlPublication }>(
+        `/api/integrations/mercadolibre/properties/${propertyId}/publish`,
+      );
+      return res.data.data;
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["ml", "publication", propertyId] }),
+  });
+}
+
+export function useUpdateMlPublication(propertyId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await api.put<{ data: MlPublication }>(
+        `/api/integrations/mercadolibre/properties/${propertyId}`,
+      );
+      return res.data.data;
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["ml", "publication", propertyId] }),
+  });
+}
+
+export function useSetMlPublicationStatus(propertyId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (status: "active" | "paused" | "closed") => {
+      const res = await api.patch<{ data: MlPublication }>(
+        `/api/integrations/mercadolibre/properties/${propertyId}/status`,
+        { status },
+      );
+      return res.data.data;
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["ml", "publication", propertyId] }),
+  });
+}
+
+export function useDeleteMlPublication(propertyId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api.delete(`/api/integrations/mercadolibre/properties/${propertyId}`),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["ml", "publication", propertyId] }),
+  });
+}

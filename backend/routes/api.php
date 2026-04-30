@@ -271,6 +271,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [MlAuthController::class, 'me']);
         Route::delete('/disconnect', [MlAuthController::class, 'disconnect']);
 
+        Route::get('/properties/{property}', [MlPropertyController::class, 'show']);
         Route::post('/properties/{property}/publish', [MlPropertyController::class, 'publish']);
         Route::put('/properties/{property}', [MlPropertyController::class, 'update']);
         Route::patch('/properties/{property}/status', [MlPropertyController::class, 'setStatus']);

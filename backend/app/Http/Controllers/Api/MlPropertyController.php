@@ -13,6 +13,15 @@ class MlPropertyController extends Controller
 {
     public function __construct(private readonly MlPropertyPublisher $publisher) {}
 
+    /** GET /api/integrations/mercadolibre/properties/{property} — estado de la publicación */
+    public function show(Property $property): JsonResponse
+    {
+        $pub = MlPublication::where('property_id', $property->id)->first();
+        return response()->json([
+            'data' => $pub ? $this->shape($pub) : null,
+        ]);
+    }
+
     /** POST /api/integrations/mercadolibre/properties/{property}/publish */
     public function publish(Property $property): JsonResponse
     {
