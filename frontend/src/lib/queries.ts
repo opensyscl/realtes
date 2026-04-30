@@ -2828,3 +2828,54 @@ export function useDeleteInspectionPhoto() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["inspections"] }),
   });
 }
+
+// ===========================================================
+// Integrations — Mercado Libre Inmobiliario (VIS)
+// ===========================================================
+export interface MlIntegrationStatus {
+  connected: boolean;
+  ml_user_id?: number | null;
+  connected_at?: string | null;
+  expires_at?: string | null;
+  last_refresh_at?: string | null;
+  last_error?: string | null;
+}
+
+export function useMlIntegration() {
+  return useQuery({
+    queryKey: ["integrations", "mercadolibre", "me"],
+    queryFn: async () => {
+      const res = await api.get<MlIntegrationStatus>(
+        "/api/integrations/mercadolibre/me",
+      );
+      return res.data;
+    },
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * Inicia el flujo OAuth: pide al backend la URL firmada y redirige el navegador.
+ * NO usa useMutation porque la "respuesta" útil es la redirección, no un valor.
+ */
+export function useConnectMl() {
+  return useMutation({
+    mutationFn: async () => {
+      const res = await api.get<{ url: string }>(
+        "/api/integrations/mercadolibre/connect",
+      );
+      window.location.href = res.data.url;
+      // Nunca llega — el browser se va antes.
+      return res.data.url;
+    },
+  });
+}
+
+export function useDisconnectMl() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.delete("/api/integrations/mercadolibre/disconnect"),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["integrations", "mercadolibre"] }),
+  });
+}

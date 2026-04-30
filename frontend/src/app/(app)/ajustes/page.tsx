@@ -16,11 +16,13 @@ import {
   Image01Icon,
   QrCode01Icon,
   Calculator01Icon,
+  PlugSocketIcon,
 } from "@hugeicons/core-free-icons";
 
 import { WatermarkTab } from "@/components/settings/watermark-tab";
 import { QrTab } from "@/components/settings/qr-tab";
 import { PricesTab } from "@/components/settings/prices-tab";
+import { IntegrationsTab } from "@/components/settings/integrations-tab";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,7 +49,7 @@ import { SUPPORTED_CURRENCIES } from "@/lib/utils";
 import { UpgradeDialog } from "@/components/billing/upgrade-dialog";
 import { cn, formatCurrency } from "@/lib/utils";
 
-type TabId = "perfil" | "agencia" | "marca_agua" | "qr" | "precios" | "facturacion" | "distribucion" | "api" | "seguridad";
+type TabId = "perfil" | "agencia" | "marca_agua" | "qr" | "precios" | "facturacion" | "distribucion" | "integraciones" | "api" | "seguridad";
 
 const TABS: { id: TabId; label: string; icon: Parameters<typeof Icon>[0]["icon"] }[] = [
   { id: "perfil", label: "Perfil", icon: UserIcon },
@@ -57,12 +59,18 @@ const TABS: { id: TabId; label: string; icon: Parameters<typeof Icon>[0]["icon"]
   { id: "precios", label: "Ajuste de precios", icon: Calculator01Icon },
   { id: "facturacion", label: "Facturación", icon: ZapIcon },
   { id: "distribucion", label: "Distribución", icon: ZapIcon },
+  { id: "integraciones", label: "Integraciones", icon: PlugSocketIcon },
   { id: "api", label: "API & Tokens", icon: SquareLock02Icon },
   { id: "seguridad", label: "Seguridad", icon: SquareLock02Icon },
 ];
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState<TabId>("perfil");
+  // Si venimos del callback OAuth (?ml=connected|error), abrir directo el tab Integraciones.
+  const initialTab: TabId =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("ml")
+      ? "integraciones"
+      : "perfil";
+  const [tab, setTab] = useState<TabId>(initialTab);
 
   return (
     <div className="px-6 py-6">
@@ -105,6 +113,7 @@ export default function SettingsPage() {
           {tab === "precios" && <PricesTab />}
           {tab === "facturacion" && <FacturacionTab />}
           {tab === "distribucion" && <DistribucionTab />}
+          {tab === "integraciones" && <IntegrationsTab />}
           {tab === "api" && <ApiTokensTab />}
           {tab === "seguridad" && <SeguridadTab />}
         </div>
