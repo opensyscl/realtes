@@ -159,6 +159,8 @@ export interface Property {
   cover_image_url: string | null;
   is_published?: boolean;
   is_shared?: boolean;
+  /** Canales externos donde está publicada (mercadolibre, portal_inmobiliario, idealista, ...) */
+  published_channels?: string[];
   is_archived?: boolean;
   archived_at?: string | null;
   share_pct?: number | null;

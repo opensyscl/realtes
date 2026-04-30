@@ -26,7 +26,7 @@ class PropertyController extends Controller
         // (default)      → solo activas (excluye soft-deleted)
         $trashedMode = $request->string('trashed')->toString();
         $q = Property::query()
-            ->with(['building', 'activeContract'])
+            ->with(['building', 'activeContract', 'mlPublication'])
             ->withCount('leads');
 
         if ($trashedMode === 'only') {

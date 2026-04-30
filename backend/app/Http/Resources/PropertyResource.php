@@ -73,6 +73,10 @@ class PropertyResource extends JsonResource
             'video_url' => $this->video_url,
             'is_published' => (bool) $this->is_published,
             'is_shared' => (bool) $this->is_shared,
+            // Canales externos donde la propiedad está publicada (active|paused — closed se ignora).
+            // El frontend renderea iconos en el card footer. Cada nuevo conector
+            // añade su id acá.
+            'published_channels' => $this->buildPublishedChannels(),
             'share_pct' => $this->share_pct !== null ? (float) $this->share_pct : null,
             'view_count' => (int) ($this->view_count ?? 0),
             'last_viewed_at' => $this->last_viewed_at?->toIso8601String(),
@@ -133,5 +137,25 @@ class PropertyResource extends JsonResource
             'archived_at' => $this->deleted_at?->toIso8601String(),
             'is_archived' => $this->deleted_at !== null,
         ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildPublishedChannels(): array
+    {
+        $out = [];
+
+        // Mercado Libre / Portal Inmobiliario
+        // Usa la relación cargada si existe, si no consulta inline (1 query extra max).
+        $ml = $this->relationLoaded('mlPublication')
+            ? $this->mlPublication
+            : \App\Models\MlPublication::where('property_id', $this->id)->first();
+
+        if ($ml && in_array($ml->ml_status, ['active', 'paused'], true)) {
+            $out[] = 'mercadolibre';
+        }
+
+        return $out;
     }
 }

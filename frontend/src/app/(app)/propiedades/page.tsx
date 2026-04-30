@@ -950,9 +950,57 @@ function PropertyCard({ property: p }: { property: Property }) {
             </div>
 
             <ContractRow property={p} />
+
+            <PublishedChannels channels={p.published_channels} />
           </div>
         </Card>
       </Link>
+    </div>
+  );
+}
+
+/**
+ * Iconitos del footer mostrando dónde está publicada la propiedad.
+ * Cada nuevo conector (Toctoc, Idealista, etc.) suma una entrada en CHANNEL_BADGES.
+ */
+const CHANNEL_BADGES: Record<
+  string,
+  { label: string; bg: string; fg: string; mark: string }
+> = {
+  mercadolibre: {
+    label: "Mercado Libre / Portal Inmobiliario",
+    bg: "#FFE600",
+    fg: "#1f2937",
+    mark: "ML",
+  },
+  // Cuando agreguemos:
+  // toctoc:    { label: "Toctoc",    bg: "#ff6900", fg: "#fff", mark: "TT" },
+  // idealista: { label: "Idealista", bg: "#7cb342", fg: "#fff", mark: "ID" },
+};
+
+function PublishedChannels({ channels }: { channels?: string[] }) {
+  if (!channels || channels.length === 0) return null;
+  return (
+    <div className="mt-3 flex items-center gap-1.5 border-t border-border-subtle pt-2">
+      <span className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
+        Publicada en
+      </span>
+      <div className="flex items-center gap-1">
+        {channels.map((c) => {
+          const def = CHANNEL_BADGES[c];
+          if (!def) return null;
+          return (
+            <span
+              key={c}
+              title={def.label}
+              className="flex h-4 w-4 items-center justify-center rounded text-[8px] font-bold"
+              style={{ backgroundColor: def.bg, color: def.fg }}
+            >
+              {def.mark}
+            </span>
+          );
+        })}
+      </div>
     </div>
   );
 }
