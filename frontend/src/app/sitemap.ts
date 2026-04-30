@@ -5,7 +5,35 @@ import { SERVICE_SLUGS } from "@/lib/services-data";
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://realtes.cl";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+const API_URL =
+  process.env.BACKEND_INTERNAL_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  "";
+
+export const revalidate = 3600;
+
+interface PublicAgencyEntry {
+  slug: string;
+  updated_at?: string;
+  properties_count?: number;
+}
+
+async function fetchPublicAgencies(): Promise<PublicAgencyEntry[]> {
+  if (!API_URL) return [];
+  try {
+    const res = await fetch(`${API_URL}/api/public/_agencies`, {
+      next: { revalidate: 3600 },
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as { data?: PublicAgencyEntry[] };
+    return Array.isArray(json.data) ? json.data : [];
+  } catch {
+    return [];
+  }
+}
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const lastModified = new Date();
 
   const services: MetadataRoute.Sitemap = SERVICE_SLUGS.map((slug) => ({
@@ -13,6 +41,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified,
     changeFrequency: "monthly" as const,
     priority: 0.8,
+  }));
+
+  const agencies = await fetchPublicAgencies();
+  const agencyEntries: MetadataRoute.Sitemap = agencies.map((a) => ({
+    url: `${SITE_URL}/p/${a.slug}`,
+    lastModified: a.updated_at ? new Date(a.updated_at) : lastModified,
+    changeFrequency: "weekly" as const,
+    priority: 0.6,
   }));
 
   return [
@@ -25,6 +61,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         languages: {
           "es-CL": `${SITE_URL}/`,
           es: `${SITE_URL}/`,
+          "x-default": `${SITE_URL}/`,
         },
       },
     },
@@ -47,5 +84,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     ...services,
+    ...agencyEntries,
   ];
 }

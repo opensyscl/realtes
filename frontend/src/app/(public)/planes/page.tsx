@@ -7,7 +7,7 @@ const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://realtes.cl";
 
 export const metadata: Metadata = {
-  title: "Planes y precios — Lite $19.990, Pro $39.990, Business $89.990",
+  title: "Planes y precios — desde $19.990/mes",
   description:
     "Precios simples por número de propiedades para corredoras en Chile. Lite desde $19.990/mes (25 props), Pro $39.990/mes (100 props), Business $89.990/mes (400 props). 14 días gratis sin tarjeta. Cancela cuando quieras.",
   keywords: [

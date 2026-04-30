@@ -11,7 +11,7 @@ const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://realtes.cl";
 
 export const metadata: Metadata = {
-  title: "Reseñas — qué dicen las corredoras que usan Realtes",
+  title: "Reseñas — 4.9★ de 1.247 corredoras",
   description:
     "Más de 1.200 reseñas de corredoras de propiedades en Chile. 4.9 estrellas promedio. Lee historias reales de cómo Realtes les ayudó a operar con menos fricción y cerrar más operaciones.",
   keywords: [

@@ -35,4 +35,21 @@ return [
         ],
     ],
 
+    'mercadolibre' => [
+        'client_id' => env('ML_CLIENT_ID'),
+        'client_secret' => env('ML_CLIENT_SECRET'),
+        'redirect_uri' => env('ML_REDIRECT_URI'),
+        'site_id' => env('ML_SITE_ID', 'MLC'),
+        'auth_base' => env('ML_AUTH_BASE', 'https://auth.mercadolibre.cl/authorization'),
+        'api_base' => env('ML_API_BASE', 'https://api.mercadolibre.com'),
+        'allowed_ips' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', env('ML_ALLOWED_IPS', '54.88.218.97,18.215.140.160,18.213.114.129,18.206.34.84')),
+        ))),
+        'frontend_redirect' => env(
+            'ML_FRONTEND_REDIRECT',
+            rtrim((string) env('FRONTEND_URL', 'http://localhost:3001'), '/').'/ajustes/integraciones',
+        ),
+    ],
+
 ];

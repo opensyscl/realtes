@@ -8,27 +8,48 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/funcionalidades", "/planes", "/p/"],
+        allow: [
+          "/",
+          "/funcionalidades",
+          "/funcionalidades/",
+          "/planes",
+          "/resenas",
+          "/p/",
+        ],
         disallow: [
           "/api/",
+          "/feeds/",
           "/dashboard",
-          "/dashboard/*",
-          "/(app)/*",
-          "/registro",
+          "/dashboard/",
           "/login",
+          "/registro",
           "/forgot",
+          "/reset",
           "/_next/",
-          "/*?*plan=", // evita query params que generan dup content
+          "/*?*plan=",
+          "/*?*utm_",
+          "/*?*ref=",
+          "/*?*fbclid=",
+          "/*?*gclid=",
         ],
       },
-      // Bloqueamos crawlers de IA agresivos / scrapers
-      // (mantener Google, Bing, DuckDuckGo, AI search legítimos como Perplexity/OpenAI)
+      // Bloquear scrapers SEO agresivos. Mantenemos abiertos los crawlers
+      // legítimos (Googlebot, Bingbot, DuckDuckBot, GPTBot, PerplexityBot).
       {
-        userAgent: ["AhrefsBot", "SemrushBot", "MJ12bot", "DotBot"],
+        userAgent: [
+          "AhrefsBot",
+          "SemrushBot",
+          "MJ12bot",
+          "DotBot",
+          "BLEXBot",
+          "PetalBot",
+          "DataForSeoBot",
+          "SerpstatBot",
+          "barkrowler",
+        ],
         disallow: "/",
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
-    host: SITE_URL,
   };
 }

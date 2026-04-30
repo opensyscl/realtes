@@ -15,6 +15,9 @@ use App\Http\Controllers\Api\FeedController;
 use App\Http\Controllers\Api\LeadController;
 use App\Http\Controllers\Api\MaintenanceController;
 use App\Http\Controllers\Api\MarketplaceController;
+use App\Http\Controllers\Api\MlAuthController;
+use App\Http\Controllers\Api\MlPropertyController;
+use App\Http\Controllers\Api\MlWebhookController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PlanController;
@@ -39,6 +42,9 @@ Route::post('/auth/forgot', [AuthController::class, 'forgotPassword'])
     ->middleware('throttle:5,15');
 Route::post('/auth/reset', [AuthController::class, 'resetPassword'])
     ->middleware('throttle:5,15');
+
+// Lista pública de agencias indexables (para el sitemap del marketing site)
+Route::get('/public/_agencies', [PublicController::class, 'agencies']);
 
 // Escaparate público de cada agencia (sin auth)
 Route::prefix('public/{slug}')->group(function () {
@@ -85,6 +91,15 @@ Route::prefix('feeds/{slug}')->group(function () {
 
 // Planes públicos (página de precios)
 Route::get('/plans', [PlanController::class, 'index']);
+
+// ---------- Mercado Libre: callback OAuth + webhook (públicos) ----------
+// Callback: público porque ML redirige al navegador del usuario sin Bearer token.
+// Validación va por `state` firmado con Crypt::encryptString (ver MlOAuth::decodeState).
+Route::get('/integrations/mercadolibre/callback', [MlAuthController::class, 'callback']);
+
+// Webhook ML: público, validado por IP whitelist (config/services.php → allowed_ips).
+// Encola el procesamiento porque ML exige 200 en <500ms.
+Route::post('/webhooks/mercadolibre', [MlWebhookController::class, 'handle']);
 
 // ---------- Autenticadas ----------
 Route::middleware('auth:sanctum')->group(function () {
@@ -249,6 +264,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/billing/upgrade', [BillingController::class, 'upgrade']);
     Route::post('/billing/cancel', [BillingController::class, 'cancel']);
     Route::post('/billing/reactivate', [BillingController::class, 'reactivate']);
+
+    // ---------- Mercado Libre: gestión per-agency ----------
+    Route::prefix('integrations/mercadolibre')->group(function () {
+        Route::get('/connect', [MlAuthController::class, 'connect']);
+        Route::get('/me', [MlAuthController::class, 'me']);
+        Route::delete('/disconnect', [MlAuthController::class, 'disconnect']);
+
+        Route::post('/properties/{property}/publish', [MlPropertyController::class, 'publish']);
+        Route::put('/properties/{property}', [MlPropertyController::class, 'update']);
+        Route::patch('/properties/{property}/status', [MlPropertyController::class, 'setStatus']);
+        Route::delete('/properties/{property}', [MlPropertyController::class, 'destroy']);
+    });
 
     // Email templates + logs
     Route::get('/email-templates', [EmailController::class, 'indexTemplates']);

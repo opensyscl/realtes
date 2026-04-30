@@ -22,6 +22,38 @@ use Illuminate\Support\Str;
  */
 class PublicController extends Controller
 {
+    /**
+     * Lista las agencias públicas indexables (para el sitemap del marketing site).
+     * No expone datos privados — solo slug + nombre + última actividad pública.
+     */
+    public function agencies(): JsonResponse
+    {
+        $rows = Agency::where('active', true)
+            ->whereNotNull('slug')
+            ->select(['id', 'slug', 'name', 'updated_at'])
+            ->orderBy('slug')
+            ->get()
+            ->map(function ($a) {
+                $count = Property::withoutGlobalScopes()
+                    ->where('agency_id', $a->id)
+                    ->where('is_published', true)
+                    ->where('status', 'disponible')
+                    ->count();
+                return [
+                    'slug' => $a->slug,
+                    'name' => $a->name,
+                    'updated_at' => optional($a->updated_at)->toIso8601String(),
+                    'properties_count' => $count,
+                ];
+            })
+            // Solo agencias con al menos una propiedad publicada → evita
+            // sitemap entries vacías (mal SEO).
+            ->filter(fn ($a) => ($a['properties_count'] ?? 0) > 0)
+            ->values();
+
+        return response()->json(['data' => $rows]);
+    }
+
     public function agency(string $slug): JsonResponse
     {
         $agency = Agency::where('slug', $slug)->where('active', true)->firstOrFail();

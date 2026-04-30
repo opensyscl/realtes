@@ -173,7 +173,7 @@ export function SoftwareApplicationSchema() {
           "Roles y permisos granulares",
           "Soporte en español",
         ],
-        screenshot: `${SITE_URL}/opengraph-image`,
+        screenshot: `${SITE_URL}/og`,
         audience: {
           "@type": "Audience",
           audienceType: "Corredoras de propiedades, brokers inmobiliarios",
@@ -294,6 +294,175 @@ export function BreadcrumbSchema({
           name: item.name,
           item: item.url,
         })),
+      }}
+    />
+  );
+}
+
+/* ============ Real estate verticals ============ */
+
+export function RealEstateAgentSchema({
+  name,
+  url,
+  description,
+  logoUrl,
+  phone,
+  email,
+  address,
+  city,
+  propertiesCount,
+}: {
+  name: string;
+  url: string;
+  description?: string;
+  logoUrl?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  city?: string | null;
+  propertiesCount?: number;
+}) {
+  return (
+    <JsonLd
+      data={{
+        "@context": "https://schema.org",
+        "@type": "RealEstateAgent",
+        "@id": `${url}#agency`,
+        name,
+        url,
+        description:
+          description ??
+          `Corredora de propiedades ${name} — escaparate público con propiedades en venta y arriendo.`,
+        ...(logoUrl ? { logo: logoUrl, image: logoUrl } : {}),
+        ...(phone ? { telephone: phone } : {}),
+        ...(email ? { email } : {}),
+        ...(address || city
+          ? {
+              address: {
+                "@type": "PostalAddress",
+                ...(address ? { streetAddress: address } : {}),
+                ...(city ? { addressLocality: city } : {}),
+                addressCountry: "CL",
+              },
+            }
+          : {}),
+        areaServed: { "@type": "Country", name: "Chile" },
+        ...(typeof propertiesCount === "number"
+          ? {
+              makesOffer: {
+                "@type": "Offer",
+                itemOffered: {
+                  "@type": "Accommodation",
+                  name: `${propertiesCount} propiedades disponibles`,
+                },
+              },
+            }
+          : {}),
+        isPartOf: { "@id": `${SITE_URL}/#organization` },
+      }}
+    />
+  );
+}
+
+export function RealEstateListingSchema({
+  name,
+  description,
+  url,
+  image,
+  price,
+  priceCurrency,
+  listingType,
+  propertyType,
+  bedrooms,
+  bathrooms,
+  areaSqm,
+  address,
+  city,
+  postalCode,
+  agencyName,
+  agencyUrl,
+}: {
+  name: string;
+  description?: string;
+  url: string;
+  image?: string | null;
+  price?: number | null;
+  priceCurrency?: string;
+  listingType?: string;
+  propertyType?: string;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  areaSqm?: number | null;
+  address?: string | null;
+  city?: string | null;
+  postalCode?: string | null;
+  agencyName?: string;
+  agencyUrl?: string;
+}) {
+  const accommodationType = (() => {
+    const t = (propertyType ?? "").toLowerCase();
+    if (t.includes("casa")) return "House";
+    if (t.includes("oficina")) return "Office";
+    if (t.includes("local")) return "Store";
+    return "Apartment";
+  })();
+
+  return (
+    <JsonLd
+      data={{
+        "@context": "https://schema.org",
+        "@type": accommodationType,
+        name,
+        ...(description ? { description } : {}),
+        url,
+        ...(image ? { image } : {}),
+        ...(typeof bedrooms === "number" ? { numberOfRooms: bedrooms } : {}),
+        ...(typeof bathrooms === "number"
+          ? { numberOfBathroomsTotal: bathrooms }
+          : {}),
+        ...(typeof areaSqm === "number" && areaSqm > 0
+          ? {
+              floorSize: {
+                "@type": "QuantitativeValue",
+                value: areaSqm,
+                unitCode: "MTK",
+              },
+            }
+          : {}),
+        ...(address || city
+          ? {
+              address: {
+                "@type": "PostalAddress",
+                ...(address ? { streetAddress: address } : {}),
+                ...(city ? { addressLocality: city } : {}),
+                ...(postalCode ? { postalCode } : {}),
+                addressCountry: "CL",
+              },
+            }
+          : {}),
+        ...(typeof price === "number" && price > 0
+          ? {
+              offers: {
+                "@type": "Offer",
+                price: String(price),
+                priceCurrency: priceCurrency ?? "CLP",
+                availability: "https://schema.org/InStock",
+                url,
+                ...(listingType
+                  ? { businessFunction: `https://schema.org/${listingType.toLowerCase() === "venta" ? "Sell" : "LeaseOut"}` }
+                  : {}),
+              },
+            }
+          : {}),
+        ...(agencyName && agencyUrl
+          ? {
+              provider: {
+                "@type": "RealEstateAgent",
+                name: agencyName,
+                url: agencyUrl,
+              },
+            }
+          : {}),
       }}
     />
   );
