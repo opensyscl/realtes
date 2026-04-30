@@ -49,7 +49,12 @@ class MlAuthController extends Controller
 
         try {
             $verified = $this->oauth->decodeState($state);
-            $token = $this->oauth->exchangeCode($code, $verified['agency_id'], $verified['user_id']);
+            $token = $this->oauth->exchangeCode(
+                $code,
+                $verified['agency_id'],
+                $verified['user_id'],
+                $verified['code_verifier'],
+            );
         } catch (\Throwable $e) {
             Log::error('ML OAuth exchange failed', ['err' => $e->getMessage()]);
             return redirect()->away($redirect.'?ml=error&reason='.urlencode($e->getMessage()));

@@ -46,9 +46,10 @@ return [
             'trim',
             explode(',', env('ML_ALLOWED_IPS', '54.88.218.97,18.215.140.160,18.213.114.129,18.206.34.84')),
         ))),
+        // /ajustes con la pestaña Integraciones (no es una ruta separada — es un tab)
         'frontend_redirect' => env(
             'ML_FRONTEND_REDIRECT',
-            rtrim((string) env('FRONTEND_URL', 'http://localhost:3001'), '/').'/ajustes/integraciones',
+            rtrim((string) env('FRONTEND_URL', 'http://localhost:3001'), '/').'/ajustes',
         ),
     ],
 

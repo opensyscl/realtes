@@ -34,14 +34,21 @@ class MlOAuth
 
     /**
      * URL que el usuario debe visitar para autorizar Realtes contra su cuenta ML.
-     * El parámetro `state` lleva agency_id + user_id firmados (Crypt::encrypt) para que
-     * el callback público los pueda recuperar sin sesión activa.
+     * El parámetro `state` lleva agency_id + user_id + code_verifier (PKCE) firmados
+     * (Crypt::encrypt) para que el callback público los pueda recuperar sin sesión.
+     *
+     * ML exige PKCE (S256) aunque la opción esté desmarcada en developers.mercadolibre.cl.
      */
     public function authorizationUrl(int $agencyId, int $userId): string
     {
+        // PKCE: verifier aleatorio (43-128 chars) + challenge SHA256 base64url.
+        $verifier = rtrim(strtr(base64_encode(random_bytes(48)), '+/', '-_'), '=');
+        $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
+
         $state = Crypt::encryptString(json_encode([
             'agency_id' => $agencyId,
             'user_id' => $userId,
+            'cv' => $verifier,
             'nonce' => bin2hex(random_bytes(8)),
             'exp' => now()->addMinutes(15)->timestamp,
         ]));
@@ -51,11 +58,13 @@ class MlOAuth
             'client_id' => $this->clientId,
             'redirect_uri' => $this->redirectUri,
             'state' => $state,
+            'code_challenge' => $challenge,
+            'code_challenge_method' => 'S256',
         ]);
     }
 
     /**
-     * @return array{agency_id:int, user_id:int}
+     * @return array{agency_id:int, user_id:int, code_verifier:string}
      */
     public function decodeState(string $state): array
     {
@@ -74,19 +83,28 @@ class MlOAuth
             throw new RuntimeException('OAuth state expirado, repite la conexión.', 400);
         }
 
-        return ['agency_id' => (int) $data['agency_id'], 'user_id' => (int) $data['user_id']];
+        return [
+            'agency_id' => (int) $data['agency_id'],
+            'user_id' => (int) $data['user_id'],
+            'code_verifier' => (string) ($data['cv'] ?? ''),
+        ];
     }
 
-    public function exchangeCode(string $code, int $agencyId, int $userId): MlToken
+    public function exchangeCode(string $code, int $agencyId, int $userId, string $codeVerifier = ''): MlToken
     {
+        $body = [
+            'grant_type' => 'authorization_code',
+            'client_id' => $this->clientId,
+            'client_secret' => $this->clientSecret,
+            'code' => $code,
+            'redirect_uri' => $this->redirectUri,
+        ];
+        if ($codeVerifier !== '') {
+            $body['code_verifier'] = $codeVerifier;
+        }
+
         $response = Http::asForm()->acceptJson()
-            ->post($this->apiBase.'/oauth/token', [
-                'grant_type' => 'authorization_code',
-                'client_id' => $this->clientId,
-                'client_secret' => $this->clientSecret,
-                'code' => $code,
-                'redirect_uri' => $this->redirectUri,
-            ]);
+            ->post($this->apiBase.'/oauth/token', $body);
 
         $this->ensureOk($response, 'oauth.exchange');
 
