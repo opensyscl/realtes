@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\MercadoLibre\MlOAuth;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -11,7 +12,9 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        // MlOAuth requiere strings primitivos en su constructor; el container no
+        // puede auto-resolverlos. Lo bindeamos via la fábrica fromConfig().
+        $this->app->singleton(MlOAuth::class, fn () => MlOAuth::fromConfig());
     }
 
     public function boot(): void
