@@ -27,17 +27,22 @@ const STATUS_LABEL: Record<
   string,
   { label: string; tone: "positive" | "warning" | "negative" | "info" }
 > = {
-  active: { label: "Activa en ML", tone: "positive" },
-  paused: { label: "Pausada en ML", tone: "warning" },
-  closed: { label: "Cerrada en ML", tone: "negative" },
-  under_review: { label: "En revisión ML", tone: "info" },
+  active: { label: "Activa", tone: "positive" },
+  paused: { label: "Pausada", tone: "warning" },
+  closed: { label: "Cerrada", tone: "negative" },
+  under_review: { label: "En revisión", tone: "info" },
 };
 
 interface Props {
   propertyId: number;
 }
 
-export function MlPublicationCard({ propertyId }: Props) {
+/**
+ * Botones inline de gestión de la publicación en Mercado Libre.
+ * Se renderiza dentro del card "Compartir" para tener todas las acciones
+ * de distribución de la propiedad en un mismo lugar.
+ */
+export function MlPublicationButtons({ propertyId }: Props) {
   const integration = useMlIntegration();
   const publication = useMlPublication(propertyId);
   const publish = usePublishToMl(propertyId);
@@ -71,69 +76,44 @@ export function MlPublicationCard({ propertyId }: Props) {
     }
   };
 
-  // Si la integración no está conectada, mostramos solo un CTA al ajuste.
+  // Sin conexión a ML → CTA para conectar.
   if (!connected) {
     return (
-      <>
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Mercado Libre
+      <div className="flex items-center gap-2 rounded-2xl border border-dashed border-border-subtle bg-surface-muted/30 px-3 py-2 text-[11px]">
+        <Icon icon={AlertCircleIcon} size={12} className="text-foreground-muted" />
+        <span>
+          Conectá Mercado Libre en{" "}
+          <a
+            href="/ajustes?tab=integraciones"
+            className="font-medium text-foreground underline-offset-2 hover:underline"
+          >
+            Ajustes → Integraciones
+          </a>
         </span>
-        <div className="flex items-start gap-2 rounded-2xl border border-border-subtle bg-surface-muted/30 px-3 py-2.5 text-xs">
-          <Icon icon={AlertCircleIcon} size={13} className="mt-0.5 text-foreground-muted" />
-          <div>
-            Conectá tu cuenta de Mercado Libre desde{" "}
-            <a
-              href="/ajustes?tab=integraciones"
-              className="font-medium text-foreground underline-offset-2 hover:underline"
-            >
-              Ajustes → Integraciones
-            </a>{" "}
-            para publicar.
-          </div>
-        </div>
-      </>
+      </div>
     );
   }
 
   return (
-    <>
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Mercado Libre
-        </span>
-        {status && (
-          <Badge variant={status.tone} className="text-[10px]">
-            {status.label}
-          </Badge>
-        )}
-      </div>
-
+    <div className="space-y-2">
       {publication.isLoading ? (
-        <div className="h-16 animate-pulse rounded-xl bg-surface-muted/40" />
+        <div className="h-7 w-32 animate-pulse rounded-lg bg-surface-muted/40" />
       ) : pub ? (
         <>
-          <div className="space-y-1 rounded-2xl border border-border-subtle bg-surface-muted/30 px-3 py-2.5 text-[11px]">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Item ID</span>
-              <span className="font-mono tabular-numbers">{pub.ml_item_id}</span>
-            </div>
-            {pub.published_at && (
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Publicada</span>
-                <span className="tabular-numbers">
-                  {new Date(pub.published_at).toLocaleDateString("es-CL", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </span>
-              </div>
+          {/* Status row */}
+          <div className="flex items-center gap-2 text-[11px] tabular-numbers">
+            <span className="text-muted-foreground">ML</span>
+            {status && (
+              <Badge variant={status.tone} className="text-[10px]">
+                {status.label}
+              </Badge>
             )}
-            {pub.last_error && (
-              <div className="mt-1 text-negative">⚠ {pub.last_error}</div>
-            )}
+            <span className="font-mono text-muted-foreground">
+              {pub.ml_item_id}
+            </span>
           </div>
 
+          {/* Action buttons */}
           <div className="flex flex-wrap gap-2">
             {pub.ml_permalink && (
               <a href={pub.ml_permalink} target="_blank" rel="noopener noreferrer">
@@ -208,37 +188,42 @@ export function MlPublicationCard({ propertyId }: Props) {
               </Button>
             )}
           </div>
+
+          {pub.last_error && (
+            <div className="text-[11px] text-negative">⚠ {pub.last_error}</div>
+          )}
         </>
       ) : (
-        <>
-          <p className="text-xs text-foreground-muted">
-            Esta propiedad todavía no está publicada en Mercado Libre / Portal
-            Inmobiliario.
-          </p>
-          <Button
-            disabled={isLoading}
-            onClick={() =>
-              handleAction(async () => {
-                const r = await publish.mutateAsync();
-                if (r.ml_permalink) {
-                  setTimeout(() => window.open(r.ml_permalink!, "_blank"), 300);
-                }
-              }, "Propiedad publicada en Mercado Libre")
-            }
-          >
-            {publish.isPending ? (
-              <>
-                <Icon icon={RefreshIcon} size={13} className="animate-spin" />
-                Publicando...
-              </>
-            ) : (
-              <>
-                <Icon icon={CheckmarkCircle02Icon} size={13} />
-                Publicar en Mercado Libre
-              </>
-            )}
-          </Button>
-        </>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={isLoading}
+          onClick={() =>
+            handleAction(async () => {
+              const r = await publish.mutateAsync();
+              if (r.ml_permalink) {
+                setTimeout(() => window.open(r.ml_permalink!, "_blank"), 300);
+              }
+            }, "Propiedad publicada en Mercado Libre")
+          }
+        >
+          {publish.isPending ? (
+            <>
+              <Icon icon={RefreshIcon} size={13} className="animate-spin" />
+              Publicando...
+            </>
+          ) : (
+            <>
+              <span
+                className="flex h-4 w-4 items-center justify-center rounded-md text-[9px] font-bold"
+                style={{ backgroundColor: "#FFE600", color: "#1f2937" }}
+              >
+                ML
+              </span>
+              Publicar en Mercado Libre
+            </>
+          )}
+        </Button>
       )}
 
       {error && (
@@ -246,6 +231,9 @@ export function MlPublicationCard({ propertyId }: Props) {
           {error}
         </div>
       )}
-    </>
+    </div>
   );
 }
+
+// Alias retro-compatible por si alguien sigue importando MlPublicationCard.
+export { MlPublicationButtons as MlPublicationCard };

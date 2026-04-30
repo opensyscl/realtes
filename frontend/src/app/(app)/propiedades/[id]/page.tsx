@@ -54,7 +54,7 @@ import {
 } from "@/lib/queries";
 import { DocumentDropZone } from "@/components/documents/document-dropzone";
 import { InspectionsTab } from "@/components/properties/inspections-tab";
-import { MlPublicationCard } from "@/components/properties/ml-publication-card";
+import { MlPublicationButtons } from "@/components/properties/ml-publication-card";
 import { PropertyMessagesDrawer } from "@/components/properties/property-messages-drawer";
 import { toast } from "@/lib/toast";
 import { usePropertyLeads } from "@/lib/queries";
@@ -260,16 +260,11 @@ export default function PropertyDetailPage({
             />
           </Card>
 
-          {/* Mercado Libre / Portal Inmobiliario */}
-          <Card className="space-y-2 p-4">
-            <MlPublicationCard propertyId={p.id} />
-          </Card>
-
-          {/* Compartir público */}
+          {/* Compartir + publicar (escaparate, ML, futuras integraciones) */}
           {agencySlug && (
-            <Card className="space-y-2 p-4">
+            <Card className="space-y-3 p-4">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Compartir
+                Compartir y publicar
               </span>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -294,6 +289,9 @@ export default function PropertyDetailPage({
                     Ver pública
                   </Button>
                 </Link>
+              </div>
+              <div className="border-t border-border-subtle pt-2">
+                <MlPublicationButtons propertyId={p.id} />
               </div>
             </Card>
           )}
