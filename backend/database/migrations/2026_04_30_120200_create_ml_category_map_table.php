@@ -23,12 +23,29 @@ return new class extends Migration
         });
 
         $now = now();
-        DB::table('ml_category_map')->insert([
-            ['agency_id' => null, 'property_type' => 'apartamento', 'listing_type' => 'venta',    'category_id' => 'MLC1459', 'listing_type_id' => 'gold_special', 'label' => 'Departamentos en venta',    'created_at' => $now, 'updated_at' => $now],
-            ['agency_id' => null, 'property_type' => 'casa',         'listing_type' => 'venta',    'category_id' => 'MLC1574', 'listing_type_id' => 'gold_special', 'label' => 'Casas en venta',            'created_at' => $now, 'updated_at' => $now],
-            ['agency_id' => null, 'property_type' => 'apartamento', 'listing_type' => 'arriendo', 'category_id' => 'MLC1500', 'listing_type_id' => 'gold_special', 'label' => 'Departamentos en arriendo', 'created_at' => $now, 'updated_at' => $now],
-            ['agency_id' => null, 'property_type' => 'casa',         'listing_type' => 'arriendo', 'category_id' => 'MLC1500', 'listing_type_id' => 'gold_special', 'label' => 'Casas en arriendo',         'created_at' => $now, 'updated_at' => $now],
-        ]);
+        // Categorías hoja del árbol Inmuebles MLC (las padre como MLC1459/1472 no permiten
+        // listing_allowed). Cada listing_type incluye 'arriendo' (Chile) y 'alquiler' (España)
+        // para soportar ambos vocabularios en el mismo schema.
+        $rows = [
+            // Departamentos
+            ['apartamento', 'venta',    'MLC157522', 'Departamentos en venta'],
+            ['apartamento', 'arriendo', 'MLC183186', 'Departamentos en arriendo'],
+            ['apartamento', 'alquiler', 'MLC183186', 'Departamentos en alquiler'],
+            // Casas
+            ['casa',         'venta',    'MLC157520', 'Casas en venta'],
+            ['casa',         'arriendo', 'MLC183184', 'Casas en arriendo'],
+            ['casa',         'alquiler', 'MLC183184', 'Casas en alquiler'],
+        ];
+        DB::table('ml_category_map')->insert(array_map(fn ($r) => [
+            'agency_id' => null,
+            'property_type' => $r[0],
+            'listing_type' => $r[1],
+            'category_id' => $r[2],
+            'listing_type_id' => 'gold_special',
+            'label' => $r[3],
+            'created_at' => $now,
+            'updated_at' => $now,
+        ], $rows));
     }
 
     public function down(): void
