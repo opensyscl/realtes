@@ -1,7 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { Providers } from "@/lib/providers";
 import { OrganizationSchema, WebSiteSchema } from "@/lib/schema";
+
+const UMAMI_WEBSITE_ID = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID;
+const UMAMI_SRC = process.env.NEXT_PUBLIC_UMAMI_SRC ?? "/stats-script.js";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://realtes.cl";
@@ -206,6 +210,15 @@ export default function RootLayout({
       </head>
       <body className="min-h-full bg-background text-foreground">
         <Providers>{children}</Providers>
+        {UMAMI_WEBSITE_ID && (
+          <Script
+            async
+            defer
+            src={UMAMI_SRC}
+            data-website-id={UMAMI_WEBSITE_ID}
+            strategy="afterInteractive"
+          />
+        )}
       </body>
     </html>
   );
