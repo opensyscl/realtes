@@ -145,6 +145,10 @@ Calculado client-side desde `due_date` vs hoy:
   el límite de items a ~20 para que el tab "Semana" tenga material.
 - Fix puntual: `activityFeed` arma descripciones con `€` hardcodeado
   (`'€'.number_format(...)`). El mercado es Chile — se cambia a formato CLP.
+- Fix puntual: `overview` cuenta las propiedades arrendadas con
+  `status === 'arrendada'`, pero ese valor no existe en el modelo (estados
+  válidos: `disponible`, `ocupada`, `mantenimiento`, `fuera_mercado`). Hoy
+  `properties_active.rented` siempre devuelve 0. Se corrige a `ocupada`.
 
 `backend/app/Http/Controllers/Api/ChargeController.php` (endpoint `/api/charges`):
 - Aceptar param de búsqueda `q`: filtra por `code`, `concept` y nombre del
