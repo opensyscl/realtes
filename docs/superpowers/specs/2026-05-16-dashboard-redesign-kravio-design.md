@@ -70,8 +70,8 @@ La página, de arriba hacia abajo:
   (`components/layout/topbar.tsx`); no se duplican.
 
 ### 5.2 Indicadores económicos
-Se mantiene el componente `EconomicIndicators` tal cual, arriba del header o debajo
-(según se vea mejor; el actual lo tiene arriba — se conserva esa posición).
+Se mantiene el componente `EconomicIndicators` tal cual, en su posición actual
+(arriba de todo, antes del header).
 
 ### 5.3 KPI cards x3 (`kpi-card.tsx` + `sparkline.tsx`)
 Tres cards: Propiedades · Contratos vigentes · Tasa de cobro. Cada card: label +
@@ -96,7 +96,9 @@ Las barras se re-agrupan según el período (ver tabla 4).
 ### 5.6 Tabla "Seguimiento de cobros" (`charges-monitor-table.tsx`)
 Tabla al estilo "SLA Monitoring" de la referencia.
 
-Columnas (todas ordenables salvo Corredor y Prioridad si complica):
+Columnas (ordenables: Código, Concepto, Estado, Emitido, Vence — vía backend.
+Prioridad y Corredor no son ordenables: la primera es derivada, la segunda
+requeriría sort por relación):
 | Columna   | Origen                                                        |
 |-----------|---------------------------------------------------------------|
 | Checkbox  | Selección local (paridad visual; sin acción masiva)           |
