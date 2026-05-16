@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import {
   PropertyNewIcon,
@@ -17,10 +16,10 @@ import type { IconSvgElement } from "@hugeicons/react";
 import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { EconomicIndicators } from "@/components/dashboard/economic-indicators";
+import { VolumeChart } from "@/components/dashboard/volume-chart";
 import { useAuthStore } from "@/store/auth";
 import {
   useDashboardOverview,
-  useActivityVolume,
   useActivityFeed,
   useCharges,
 } from "@/lib/queries";
@@ -29,7 +28,6 @@ import { cn, formatCurrency } from "@/lib/utils";
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const { data: overview, isLoading } = useDashboardOverview();
-  const { data: volume } = useActivityVolume();
   const { data: feed } = useActivityFeed();
   const { data: charges } = useCharges({ per_page: 6 });
 
@@ -104,11 +102,8 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Gráfico de actividad semanal */}
-          <ActivityChart
-            data={volume?.data}
-            total={volume?.total}
-          />
+          {/* Gráfico de volumen de actividad */}
+          <VolumeChart />
         </div>
 
         {/* Panel lateral: últimas novedades */}
@@ -286,97 +281,6 @@ function DeltaChip({ pct }: { pct: number }) {
       {isUp ? "+" : ""}
       {pct}%
     </span>
-  );
-}
-
-// ============================================================
-// Gráfico de actividad semanal (barras)
-// ============================================================
-function ActivityChart({
-  data,
-  total,
-}: {
-  data?: { day: string; date: string; value: number }[];
-  total?: number;
-}) {
-  const [hover, setHover] = useState<number | null>(null);
-  const rows = data ?? [];
-  const max = Math.max(...rows.map((r) => r.value), 1);
-  const peakIdx = rows.reduce(
-    (best, r, i) => (r.value > (rows[best]?.value ?? -1) ? i : best),
-    0,
-  );
-
-  return (
-    <Card className="p-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <Icon
-              icon={ChartLineData01Icon}
-              size={15}
-              className="text-foreground-muted"
-            />
-            <h3 className="text-sm font-semibold">Actividad de la semana</h3>
-          </div>
-          <div className="mt-3 text-[28px] font-semibold leading-none tracking-tight tabular-numbers">
-            {total ?? 0}
-          </div>
-          <p className="mt-1.5 text-[11px] text-muted-foreground">
-            Cargos, pagos y contratos de los últimos 7 días
-          </p>
-        </div>
-      </div>
-
-      {/* Barras */}
-      <div className="mt-6">
-        {rows.length === 0 ? (
-          <div className="h-[200px] animate-pulse rounded-2xl bg-surface-muted/40" />
-        ) : (
-          <div className="flex h-[200px] items-end gap-2 sm:gap-3">
-            {rows.map((r, i) => {
-              const pct = Math.max((r.value / max) * 100, 3);
-              const active = hover === i || (hover === null && i === peakIdx);
-              return (
-                <div
-                  key={r.date}
-                  className="flex flex-1 flex-col items-center gap-2"
-                  onMouseEnter={() => setHover(i)}
-                  onMouseLeave={() => setHover(null)}
-                >
-                  <div className="relative flex w-full flex-1 items-end">
-                    {active && (
-                      <span className="absolute -top-1 left-1/2 z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg bg-foreground px-2 py-1 text-[10px] font-medium text-accent-foreground">
-                        {r.day}: {r.value}
-                      </span>
-                    )}
-                    <div
-                      className={cn(
-                        "w-full rounded-t-lg transition-colors duration-150",
-                        active
-                          ? "bg-foreground"
-                          : "bg-surface-muted group-hover:bg-surface-muted",
-                      )}
-                      style={{ height: `${pct}%` }}
-                    />
-                  </div>
-                  <span
-                    className={cn(
-                      "text-[11px] tabular-numbers",
-                      active
-                        ? "font-medium text-foreground"
-                        : "text-muted-foreground",
-                    )}
-                  >
-                    {r.day}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </Card>
   );
 }
 

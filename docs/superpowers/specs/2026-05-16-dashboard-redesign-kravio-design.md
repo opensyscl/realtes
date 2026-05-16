@@ -38,22 +38,22 @@ existen archivos huérfanos del diseño previo (`kpi-card.tsx`, `latest-updates.
 
 ## 4. Decisión de arquitectura — período y gráfico
 
-Se eligió el **Enfoque A**: un único selector de período global (Semana / Mes /
-Trimestre, default **Semana**) ubicado arriba a la derecha de la página. Maneja tanto
-los KPI cards como el gráfico de actividad.
+El gráfico de actividad lleva su **propio dropdown de período** en la card
+(Semana / Mes / Trimestre), que controla solo ese gráfico — tal como la imagen de
+referencia. Los KPI cards llevarán su propio selector aparte. Esto revisa el
+Enfoque A original (que proponía un único selector global): el usuario optó por el
+control per-card sobre la referencia.
 
 El gráfico de barras se re-agrupa según el período, manteniendo siempre pocas barras:
 
-| Período   | Buckets del gráfico                  |
-|-----------|--------------------------------------|
-| Semana    | 7 barras diarias (Lun–Dom)           |
-| Mes       | 4–5 barras semanales (Sem 1…Sem 5)   |
-| Trimestre | 3 barras mensuales                   |
+| Período   | Buckets del gráfico              |
+|-----------|----------------------------------|
+| Semana    | 7 barras diarias (Dom–Sáb)       |
+| Mes       | 4 barras semanales (~7 días c/u) |
+| Trimestre | 3 barras mensuales               |
 
-En el default (Semana) el gráfico se ve idéntico a la referencia (7 barras diarias).
-
-Descartados: B (período solo afecta KPIs, gráfico fijo) porque el control queda
-trivial; C (un dropdown por card) porque dos selectores de período es redundante.
+Default del gráfico: **Mes**. A nivel semana la data del negocio inmobiliario es
+demasiado dispersa para ser informativa.
 
 ## 5. Layout y componentes
 
@@ -78,13 +78,16 @@ Tres cards: Propiedades · Contratos vigentes · Tasa de cobro. Cada card: label
 ícono, número grande, chip de delta + texto "vs período anterior", sparkline.
 El delta se recalcula según el período global elegido.
 
-### 5.4 Gráfico de actividad (`volume-chart.tsx`)
-Card con: ícono + título, número total grande + chip de delta, barras.
-Se agrega respecto del actual:
-- Eje Y con 4–5 valores de referencia (grilla).
-- Línea punteada horizontal en el promedio de las barras, con etiqueta del valor.
-- Tooltip por barra (ya existe: "{etiqueta}: {valor}").
-Las barras se re-agrupan según el período (ver tabla 4).
+### 5.4 Gráfico de actividad (`volume-chart.tsx`) — IMPLEMENTADO
+Card con: ícono + título, dropdown de período, número total grande + chip de delta,
+barras. Respecto del gráfico anterior se agrega:
+- Eje Y con valores de referencia (grilla) sobre el borde derecho.
+- Trama diagonal decorativa en la mitad superior del área.
+- Línea punteada horizontal sobre la barra activa (resaltada / con hover), con su
+  tooltip "{etiqueta} : {valor}" anclado. No es una línea de promedio: sigue a la
+  barra activa, como muestra la imagen de referencia.
+Las barras se re-agrupan según el período (ver tabla 4). Este componente ya fue
+implementado como primer slice del rediseño.
 
 ### 5.5 Panel "Últimas novedades" (`latest-updates.tsx`)
 - Tabs: Hoy / Ayer / Semana. Filtran el feed por fecha **client-side** sobre el
@@ -137,10 +140,12 @@ Calculado client-side desde `due_date` vs hoy:
 - `overview(Request $request)`: leer `?period=week|month|quarter` (default `week`).
   Ajustar la ventana de comparación de los deltas (`subWeek` / `subMonth` /
   `subQuarter` en vez del `subMonth` fijo actual).
-- `activityVolume(Request $request)`: leer `?period`. Devolver las barras
-  re-agrupadas según el período (7 diarias / ~4-5 semanales / 3 mensuales) y
-  agregar al JSON el campo `average` (promedio de los valores de las barras) para
-  la línea punteada.
+- `activityVolume(Request $request)`: leer `?period=week|month|quarter`. Devolver
+  las barras re-agrupadas según el período (7 diarias / 4 semanales / 3 mensuales),
+  más `total`, `average` y `delta_pct` (vs el período anterior). La actividad se
+  cuenta por la fecha de dominio del evento (cargo emitido, pago recibido, contrato
+  firmado), no por `created_at`, para reflejar cuándo ocurrió de verdad. —
+  IMPLEMENTADO.
 - `activityFeed`: sin parámetro nuevo (los tabs se resuelven client-side). Se sube
   el límite de items a ~20 para que el tab "Semana" tenga material.
 - Fix puntual: `activityFeed` arma descripciones con `€` hardcodeado

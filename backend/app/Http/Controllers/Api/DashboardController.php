@@ -8,6 +8,7 @@ use App\Models\Contract;
 use App\Models\Payment;
 use App\Models\Property;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -96,27 +97,115 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function activityVolume(): JsonResponse
+    public function activityVolume(Request $request): JsonResponse
     {
-        // últimos 7 días: nº actividades = charges emitidos + payments recibidos + contratos creados
+        // nº actividades = charges emitidos + payments recibidos + contratos creados,
+        // agrupado en barras según el período (week = 7 días, month = 4 semanas,
+        // quarter = 3 meses).
+        $period = $request->query('period', 'week');
+        if (! in_array($period, ['week', 'month', 'quarter'], true)) {
+            $period = 'week';
+        }
+
+        [$buckets, $prevStart, $prevEnd] = $this->volumeBuckets($period);
+
+        $rows = array_map(fn (array $b) => [
+            'day' => $b['label'],
+            'date' => $b['start']->toDateString(),
+            'value' => $this->activityCount($b['start'], $b['end']),
+        ], $buckets);
+
+        $total = array_sum(array_column($rows, 'value'));
+        $prevTotal = $this->activityCount($prevStart, $prevEnd);
+
+        return response()->json([
+            'period' => $period,
+            'data' => $rows,
+            'total' => $total,
+            'average' => (int) round($total / max(count($rows), 1)),
+            'delta_pct' => $this->pctChange($prevTotal, $total),
+        ]);
+    }
+
+    /**
+     * Buckets del gráfico según el período, más la ventana del período anterior
+     * (para el delta). Cada bucket: ['label', 'start' => Carbon, 'end' => Carbon].
+     *
+     * @return array{0: list<array{label: string, start: Carbon, end: Carbon}>, 1: Carbon, 2: Carbon}
+     */
+    private function volumeBuckets(string $period): array
+    {
         $today = Carbon::today();
-        $rows = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $d = $today->copy()->subDays($i);
-            $charges = Charge::whereDate('created_at', $d)->count();
-            $payments = Payment::whereDate('created_at', $d)->count();
-            $contracts = Contract::whereDate('created_at', $d)->count();
-            $rows[] = [
-                'day' => ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][$d->dayOfWeek],
-                'date' => $d->toDateString(),
-                'value' => $charges + $payments + $contracts,
+        $buckets = [];
+
+        if ($period === 'quarter') {
+            // 3 buckets mensuales.
+            $months = ['', 'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            for ($i = 2; $i >= 0; $i--) {
+                $m = $today->copy()->subMonths($i);
+                $buckets[] = [
+                    'label' => $months[$m->month],
+                    'start' => $m->copy()->startOfMonth(),
+                    'end' => $m->copy()->endOfMonth(),
+                ];
+            }
+
+            return [
+                $buckets,
+                $today->copy()->subMonths(5)->startOfMonth(),
+                $today->copy()->subMonths(3)->endOfMonth(),
             ];
         }
 
-        return response()->json([
-            'data' => $rows,
-            'total' => array_sum(array_column($rows, 'value')),
-        ]);
+        if ($period === 'month') {
+            // 4 buckets semanales (28 días).
+            for ($i = 3; $i >= 0; $i--) {
+                $end = $today->copy()->subDays($i * 7);
+                $start = $end->copy()->subDays(6);
+                $buckets[] = [
+                    'label' => $start->format('j/n'),
+                    'start' => $start,
+                    'end' => $end,
+                ];
+            }
+
+            return [
+                $buckets,
+                $today->copy()->subDays(55),
+                $today->copy()->subDays(28),
+            ];
+        }
+
+        // week: 7 buckets diarios.
+        $names = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+        for ($i = 6; $i >= 0; $i--) {
+            $d = $today->copy()->subDays($i);
+            $buckets[] = [
+                'label' => $names[$d->dayOfWeek],
+                'start' => $d->copy(),
+                'end' => $d->copy(),
+            ];
+        }
+
+        return [
+            $buckets,
+            $today->copy()->subDays(13),
+            $today->copy()->subDays(7),
+        ];
+    }
+
+    /**
+     * Nº de actividades en un rango de fechas: cargos emitidos, pagos recibidos y
+     * contratos firmados. Se cuenta por la fecha de dominio del evento (no por
+     * created_at) para reflejar cuándo ocurrió realmente la actividad.
+     */
+    private function activityCount(Carbon $start, Carbon $end): int
+    {
+        $range = [$start->copy()->startOfDay(), $end->copy()->endOfDay()];
+
+        return Charge::whereBetween('issued_at', $range)->count()
+            + Payment::whereBetween('received_at', $range)->count()
+            + Contract::whereBetween('signed_at', $range)->count();
     }
 
     public function activityFeed(): JsonResponse

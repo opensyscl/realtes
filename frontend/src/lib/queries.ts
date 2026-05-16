@@ -564,14 +564,24 @@ export function useDashboardOverview() {
   });
 }
 
-export function useActivityVolume() {
+export type DashboardPeriod = "week" | "month" | "quarter";
+
+export interface ActivityVolume {
+  period: DashboardPeriod;
+  data: { day: string; date: string; value: number }[];
+  total: number;
+  average: number;
+  delta_pct: number;
+}
+
+export function useActivityVolume(period: DashboardPeriod = "week") {
   return useQuery({
-    queryKey: ["dashboard", "activity-volume"],
+    queryKey: ["dashboard", "activity-volume", period],
     queryFn: async () => {
-      const res = await api.get<{
-        data: { day: string; date: string; value: number }[];
-        total: number;
-      }>("/api/dashboard/activity-volume");
+      const res = await api.get<ActivityVolume>(
+        "/api/dashboard/activity-volume",
+        { params: { period } },
+      );
       return res.data;
     },
   });
