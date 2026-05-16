@@ -3016,3 +3016,127 @@ export function useDeleteMlPublication(propertyId: number) {
       qc.invalidateQueries({ queryKey: ["ml", "publication", propertyId] }),
   });
 }
+
+// ===========================================================
+// Hub de Canales (publicación multi-portal)
+// ===========================================================
+export interface ChannelConnection {
+  status: "connected" | "disconnected" | "error";
+  external_account_id: string | null;
+  connected_at: string | null;
+  last_synced_at: string | null;
+  last_error: string | null;
+}
+
+export interface ChannelInfo {
+  id: number;
+  slug: string;
+  name: string;
+  kind: "api" | "aggregator" | "feed";
+  description: string | null;
+  is_active: boolean;
+  has_driver: boolean;
+  connection: ChannelConnection | null;
+}
+
+export type ChannelPublicationStatus =
+  | "draft"
+  | "queued"
+  | "syncing"
+  | "published"
+  | "paused"
+  | "error"
+  | "closed";
+
+export interface ChannelPublication {
+  id: number;
+  channel_id: number;
+  property_id: number;
+  external_id: string | null;
+  external_url: string | null;
+  status: ChannelPublicationStatus;
+  external_status: string | null;
+  last_synced_at: string | null;
+  published_at: string | null;
+  last_error: string | null;
+}
+
+export interface ChannelPublicationRow {
+  channel: ChannelInfo;
+  publication: ChannelPublication | null;
+}
+
+/** Estado de la propiedad en cada canal del Hub. */
+export function useChannelPublications(propertyId: number) {
+  return useQuery({
+    queryKey: ["channels", "publications", propertyId],
+    queryFn: async () => {
+      const res = await api.get<{ data: ChannelPublicationRow[] }>(
+        `/api/properties/${propertyId}/publications`,
+      );
+      return res.data.data;
+    },
+    staleTime: 15_000,
+  });
+}
+
+export function usePublishToChannel(propertyId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { channel: string; listing_type_id?: string }) => {
+      const res = await api.post<{ data: ChannelPublication }>(
+        `/api/properties/${propertyId}/channels/${params.channel}/publish`,
+        params.listing_type_id ? { listing_type_id: params.listing_type_id } : {},
+      );
+      return res.data.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["channels", "publications", propertyId] });
+      qc.invalidateQueries({ queryKey: ["properties"] });
+    },
+  });
+}
+
+export function useSyncChannel(propertyId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (channel: string) => {
+      const res = await api.post<{ data: ChannelPublication }>(
+        `/api/properties/${propertyId}/channels/${channel}/sync`,
+      );
+      return res.data.data;
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["channels", "publications", propertyId] }),
+  });
+}
+
+export function useSetChannelStatus(propertyId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      channel: string;
+      status: "published" | "paused" | "closed";
+    }) => {
+      const res = await api.patch<{ data: ChannelPublication }>(
+        `/api/properties/${propertyId}/channels/${params.channel}/status`,
+        { status: params.status },
+      );
+      return res.data.data;
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["channels", "publications", propertyId] }),
+  });
+}
+
+export function useUnpublishChannel(propertyId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (channel: string) =>
+      api.delete(`/api/properties/${propertyId}/channels/${channel}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["channels", "publications", propertyId] });
+      qc.invalidateQueries({ queryKey: ["properties"] });
+    },
+  });
+}

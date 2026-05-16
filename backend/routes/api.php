@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AgencySettingsController;
 use App\Http\Controllers\Api\AllianceController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CalendarController;
+use App\Http\Controllers\Api\ChannelController;
 use App\Http\Controllers\Api\ChargeController;
 use App\Http\Controllers\Api\CommissionController;
 use App\Http\Controllers\Api\ContractController;
@@ -279,6 +280,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/properties/{property}/status', [MlPropertyController::class, 'setStatus']);
         Route::delete('/properties/{property}', [MlPropertyController::class, 'destroy']);
     });
+
+    // ---------- Hub de Canales (publicación multi-portal) ----------
+    Route::get('/channels', [ChannelController::class, 'index']);
+    Route::get('/properties/{property}/publications', [ChannelController::class, 'publications']);
+    Route::post('/properties/{property}/channels/{channel}/publish', [ChannelController::class, 'publish']);
+    Route::post('/properties/{property}/channels/{channel}/sync', [ChannelController::class, 'sync']);
+    Route::patch('/properties/{property}/channels/{channel}/status', [ChannelController::class, 'setStatus']);
+    Route::delete('/properties/{property}/channels/{channel}', [ChannelController::class, 'unpublish']);
 
     // Email templates + logs
     Route::get('/email-templates', [EmailController::class, 'indexTemplates']);

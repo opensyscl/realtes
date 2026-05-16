@@ -54,7 +54,7 @@ import {
 } from "@/lib/queries";
 import { DocumentDropZone } from "@/components/documents/document-dropzone";
 import { InspectionsTab } from "@/components/properties/inspections-tab";
-import { MlPublicationButtons } from "@/components/properties/ml-publication-card";
+import { ChannelsPublicationCard } from "@/components/properties/channels-publication-card";
 import { PropertyMessagesDrawer } from "@/components/properties/property-messages-drawer";
 import { toast } from "@/lib/toast";
 import { usePropertyLeads } from "@/lib/queries";
@@ -291,7 +291,7 @@ export default function PropertyDetailPage({
                 </Link>
               </div>
               <div className="border-t border-border-subtle pt-2">
-                <MlPublicationButtons propertyId={p.id} />
+                <ChannelsPublicationCard propertyId={p.id} />
               </div>
             </Card>
           )}
