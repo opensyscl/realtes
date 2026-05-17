@@ -3045,6 +3045,7 @@ export interface ChannelInfo {
   kind: "api" | "aggregator" | "feed";
   description: string | null;
   is_active: boolean;
+  supports_oauth: boolean;
   has_driver: boolean;
   connection: ChannelConnection | null;
 }
@@ -3147,6 +3148,19 @@ export function useUnpublishChannel(propertyId: number) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["channels", "publications", propertyId] });
       qc.invalidateQueries({ queryKey: ["properties"] });
+    },
+  });
+}
+
+/** Conecta un canal de tipo feed/aggregator (Proppit, etc.) para la agencia. */
+export function useConnectChannel(propertyId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (channel: string) =>
+      api.post(`/api/channels/${channel}/connect`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["channels", "publications", propertyId] });
+      qc.invalidateQueries({ queryKey: ["channels"] });
     },
   });
 }

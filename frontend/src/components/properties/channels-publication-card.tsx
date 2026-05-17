@@ -17,6 +17,7 @@ import {
   useSyncChannel,
   useSetChannelStatus,
   useUnpublishChannel,
+  useConnectChannel,
   type ChannelPublicationRow,
 } from "@/lib/queries";
 import { toast } from "@/lib/toast";
@@ -48,6 +49,7 @@ export function ChannelsPublicationCard({ propertyId }: Props) {
   const sync = useSyncChannel(propertyId);
   const setStatus = useSetChannelStatus(propertyId);
   const unpublish = useUnpublishChannel(propertyId);
+  const connect = useConnectChannel(propertyId);
   const [busy, setBusy] = useState<string | null>(null);
 
   const run = async (
@@ -131,6 +133,13 @@ export function ChannelsPublicationCard({ propertyId }: Props) {
                 `Despublicado de ${row.channel.name}`,
               )
             }
+            onConnect={() =>
+              run(
+                row.channel.slug,
+                () => connect.mutateAsync(row.channel.slug),
+                `${row.channel.name} conectado`,
+              )
+            }
           />
         ))}
       </div>
@@ -146,6 +155,7 @@ interface RowProps {
   onPause: () => void;
   onResume: () => void;
   onUnpublish: () => void;
+  onConnect: () => void;
 }
 
 function ChannelRow({
@@ -156,6 +166,7 @@ function ChannelRow({
   onPause,
   onResume,
   onUnpublish,
+  onConnect,
 }: RowProps) {
   const { channel, publication } = row;
   const available = channel.is_active && channel.has_driver;
@@ -198,17 +209,33 @@ function ChannelRow({
           {channel.description}
         </div>
       )}
-      {available && !connected && (
-        <div className="mt-0.5 text-[10px] text-muted-foreground">
-          Conectalo en{" "}
-          <a
-            href="/ajustes?tab=integraciones"
-            className="font-medium text-foreground underline-offset-2 hover:underline"
-          >
-            Ajustes → Integraciones
-          </a>
-        </div>
-      )}
+      {available &&
+        !connected &&
+        (channel.supports_oauth ? (
+          <div className="mt-0.5 text-[10px] text-muted-foreground">
+            Conectalo en{" "}
+            <a
+              href="/ajustes?tab=integraciones"
+              className="font-medium text-foreground underline-offset-2 hover:underline"
+            >
+              Ajustes → Integraciones
+            </a>
+          </div>
+        ) : (
+          <div className="mt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={onConnect}
+            >
+              {busy && (
+                <Icon icon={RefreshIcon} size={12} className="animate-spin" />
+              )}
+              Conectar {channel.name}
+            </Button>
+          </div>
+        ))}
 
       {/* Acciones */}
       {available && connected && (

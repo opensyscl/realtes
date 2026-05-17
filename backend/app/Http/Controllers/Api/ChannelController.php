@@ -10,6 +10,7 @@ use App\Models\Property;
 use App\Services\Channels\ChannelManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 /**
  * Hub de Canales — API genérica de publicación multi-portal.
@@ -34,6 +35,42 @@ class ChannelController extends Controller
                 ->map(fn (Channel $c) => $this->shapeChannel($c, $connections->get($c->id)))
                 ->all(),
         ]);
+    }
+
+    /**
+     * POST /api/channels/{channel}/connect — conecta un canal de tipo feed/aggregator.
+     * Los canales OAuth (Mercado Libre) se conectan por su propio flujo.
+     */
+    public function connect(Channel $channel): JsonResponse
+    {
+        if ($channel->supports_oauth) {
+            return response()->json([
+                'message' => "{$channel->name} se conecta por su flujo OAuth, no desde acá.",
+            ], 422);
+        }
+
+        $conn = AgencyChannel::updateOrCreate(
+            ['agency_id' => auth()->user()->agency_id, 'channel_id' => $channel->id],
+            [
+                'status' => AgencyChannel::STATUS_CONNECTED,
+                'connected_by_user_id' => auth()->id(),
+                'connected_at' => now(),
+                'credentials' => ['feed_token' => (string) Str::uuid()],
+                'last_error' => null,
+            ],
+        );
+
+        return response()->json(['data' => $this->shapeChannel($channel, $conn)]);
+    }
+
+    /** DELETE /api/channels/{channel}/disconnect */
+    public function disconnect(Channel $channel): JsonResponse
+    {
+        AgencyChannel::where('agency_id', auth()->user()->agency_id)
+            ->where('channel_id', $channel->id)
+            ->delete();
+
+        return response()->json(['ok' => true]);
     }
 
     /** GET /api/properties/{property}/publications — estado de la propiedad en cada canal. */
@@ -192,6 +229,7 @@ class ChannelController extends Controller
             'kind' => $c->kind,
             'description' => $c->description,
             'is_active' => $c->is_active,
+            'supports_oauth' => $c->supports_oauth,
             'has_driver' => $this->manager->hasDriver($c->slug),
             'connection' => $conn ? [
                 'status' => $conn->status,

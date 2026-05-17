@@ -6,6 +6,7 @@ use App\Models\AgencyChannel;
 use App\Models\Channel;
 use App\Services\Channels\Contracts\ChannelDriver;
 use App\Services\Channels\Drivers\MercadoLibreDriver;
+use App\Services\Channels\Drivers\ProppitDriver;
 use Illuminate\Contracts\Container\Container;
 use RuntimeException;
 
@@ -20,6 +21,7 @@ class ChannelManager
     /** @var array<string, class-string<ChannelDriver>> */
     private array $drivers = [
         Channel::MERCADOLIBRE => MercadoLibreDriver::class,
+        Channel::PROPPIT => ProppitDriver::class,
     ];
 
     public function __construct(private readonly Container $container) {}

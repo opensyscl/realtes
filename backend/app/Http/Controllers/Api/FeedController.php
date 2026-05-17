@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agency;
+use App\Models\Channel;
+use App\Models\ChannelPublication;
 use App\Models\Property;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
@@ -111,6 +113,67 @@ class FeedController extends Controller
         ]);
     }
 
+    /**
+     * GET /api/feeds/{slug}/proppit.xml
+     * Feed XML formato Trovit/Thribee. Proppit lo consume y redistribuye a
+     * Trovit, Mitula, iCasas, Nestoria, OLX y Properati. Incluye solo las
+     * propiedades publicadas al canal Proppit desde el Hub de Canales.
+     */
+    public function proppitXml(string $slug): Response
+    {
+        $agency = Agency::where('slug', $slug)->where('active', true)->firstOrFail();
+        $properties = $this->loadPublishedToChannel($agency->id, Channel::PROPPIT);
+
+        $xml = new \SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><trovit/>');
+
+        foreach ($properties as $p) {
+            $isSale = $p->listing_type === 'venta';
+            $ad = $xml->addChild('ad');
+
+            $ad->addChild('id', htmlspecialchars((string) $p->code));
+            $this->cdata($ad->addChild('url'), $this->publicUrl($agency, $p));
+            $this->cdata($ad->addChild('title'), (string) $p->title);
+            $this->cdata($ad->addChild('content'), (string) ($p->description ?? $p->title));
+            $ad->addChild('price', (string) (int) ($isSale ? $p->price_sale : $p->price_rent));
+            $ad->addChild('type', $isSale ? 'For Sale' : 'For Rent');
+            $this->cdata($ad->addChild('property_type'), $this->mapTrovitType((string) $p->type));
+            $this->cdata($ad->addChild('city'), (string) ($p->city ?? ''));
+            $this->cdata($ad->addChild('region'), (string) ($p->province ?? ''));
+            $ad->addChild('postcode', htmlspecialchars((string) ($p->postal_code ?? '')));
+            $this->cdata($ad->addChild('address'), (string) $p->address);
+
+            if ($p->lat && $p->lng) {
+                $ad->addChild('latitude', (string) $p->lat);
+                $ad->addChild('longitude', (string) $p->lng);
+            }
+
+            $floorArea = $ad->addChild('floor_area', (string) (int) ($p->area_sqm ?? 0));
+            $floorArea->addAttribute('unit', 'meters');
+            $ad->addChild('rooms', (string) $p->bedrooms);
+            $ad->addChild('bathrooms', (string) $p->bathrooms);
+
+            if ($p->cover_image_url) {
+                $pictures = $ad->addChild('pictures');
+                $this->cdata(
+                    $pictures->addChild('picture')->addChild('picture_url'),
+                    (string) $p->cover_image_url,
+                );
+            }
+
+            $this->cdata($ad->addChild('agency'), (string) $agency->name);
+            $ad->addChild('by_owner', '0');
+            $this->cdata(
+                $ad->addChild('date'),
+                optional($p->created_at)->format('d/m/Y H:i:s') ?? now()->format('d/m/Y H:i:s'),
+            );
+        }
+
+        return response($xml->asXML(), 200, [
+            'Content-Type' => 'application/xml; charset=utf-8',
+            'Cache-Control' => 'public, max-age=900', // 15 minutos
+        ]);
+    }
+
     private function loadProperties(int $agencyId)
     {
         return Property::withoutGlobalScopes()
@@ -181,5 +244,64 @@ class FeedController extends Controller
             'trastero' => 'storage',
             default => 'other',
         };
+    }
+
+    /** Propiedades publicadas a un canal del Hub (channel_publications status=published). */
+    private function loadPublishedToChannel(int $agencyId, string $channelSlug)
+    {
+        $channel = Channel::where('slug', $channelSlug)->first();
+        if (! $channel) {
+            return collect();
+        }
+
+        $propertyIds = ChannelPublication::where('channel_id', $channel->id)
+            ->where('agency_id', $agencyId)
+            ->where('status', ChannelPublication::STATUS_PUBLISHED)
+            ->pluck('property_id');
+
+        return Property::withoutGlobalScopes()
+            ->where('agency_id', $agencyId)
+            ->whereIn('id', $propertyIds)
+            ->where('status', 'disponible')
+            ->select([
+                'id', 'code', 'title', 'type', 'status', 'listing_type', 'description',
+                'address', 'city', 'province', 'postal_code', 'country',
+                'price_rent', 'price_sale',
+                'bedrooms', 'bathrooms', 'area_sqm',
+                'cover_image_url', 'created_at',
+                DB::raw('ST_Y(location::geometry) AS lat'),
+                DB::raw('ST_X(location::geometry) AS lng'),
+            ])
+            ->limit(2000)
+            ->get();
+    }
+
+    /** URL del aviso en el escaparate público de la agencia. */
+    private function publicUrl(Agency $agency, Property $p): string
+    {
+        $base = rtrim((string) env('FRONTEND_URL', 'http://localhost:3001'), '/');
+
+        return "{$base}/p/{$agency->slug}/{$p->id}";
+    }
+
+    /** Tipo de propiedad legible para Chile (Trovit acepta texto libre). */
+    private function mapTrovitType(string $type): string
+    {
+        return match ($type) {
+            'apartamento', 'piso' => 'Departamento',
+            'casa', 'chalet' => 'Casa',
+            'oficina' => 'Oficina',
+            'local' => 'Local comercial',
+            'parking' => 'Estacionamiento',
+            'trastero' => 'Bodega',
+            default => 'Propiedad',
+        };
+    }
+
+    /** Inserta texto como CDATA — SimpleXMLElement no tiene addCData(). */
+    private function cdata(\SimpleXMLElement $node, string $text): void
+    {
+        $dom = dom_import_simplexml($node);
+        $dom->appendChild($dom->ownerDocument->createCDATASection($text));
     }
 }

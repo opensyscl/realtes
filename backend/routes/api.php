@@ -88,6 +88,7 @@ Route::get('/proxy/image', function (\Illuminate\Http\Request $request) {
 Route::prefix('feeds/{slug}')->group(function () {
     Route::get('/properties.json', [FeedController::class, 'json']);
     Route::get('/idealista.xml', [FeedController::class, 'idealistaXml']);
+    Route::get('/proppit.xml', [FeedController::class, 'proppitXml']);
 });
 
 // Planes públicos (página de precios)
@@ -283,6 +284,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ---------- Hub de Canales (publicación multi-portal) ----------
     Route::get('/channels', [ChannelController::class, 'index']);
+    Route::post('/channels/{channel}/connect', [ChannelController::class, 'connect']);
+    Route::delete('/channels/{channel}/disconnect', [ChannelController::class, 'disconnect']);
     Route::get('/properties/{property}/publications', [ChannelController::class, 'publications']);
     Route::post('/properties/{property}/channels/{channel}/publish', [ChannelController::class, 'publish']);
     Route::post('/properties/{property}/channels/{channel}/sync', [ChannelController::class, 'sync']);
